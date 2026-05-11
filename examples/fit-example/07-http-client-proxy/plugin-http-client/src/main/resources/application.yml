@@ -1,0 +1,10 @@
+fit:
+  beans:
+    packages:
+    - 'org.fitframework.example'
+
+http:
+  client:
+    interface:
+      package:
+      - 'org.fitframework.example.client'

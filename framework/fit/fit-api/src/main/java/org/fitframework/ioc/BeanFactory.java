@@ -1,0 +1,40 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.ioc;
+
+import org.fitframework.util.Disposable;
+
+/**
+ * 为 Bean 提供工厂。
+ *
+ * @author 梁济时
+ * @since 2022-04-28
+ */
+public interface BeanFactory extends Disposable {
+    /**
+     * 获取所管理的 Bean 的定义。
+     *
+     * @return 表示 Bean 定义的 {@link BeanMetadata}。
+     */
+    BeanMetadata metadata();
+
+    /**
+     * 获取工厂所属的容器。
+     *
+     * @return 表示所属容器的 {@link BeanContainer}。
+     */
+    default BeanContainer container() {
+        return this.metadata().container();
+    }
+
+    /**
+     * 获取 Bean 实例。
+     *
+     * @param arguments 表示 Bean 的初始化参数的 {@link Object}{@code []}。
+     * @param <T> 表示 Bean 实例的类型的 {@link T}。
+     * @return 表示 Bean 实例的 {@link T}。
+     */
+    <T> T get(Object... arguments);
+}

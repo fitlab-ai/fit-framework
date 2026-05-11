@@ -1,0 +1,50 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.schedule.support;
+
+import org.fitframework.inspection.Nonnull;
+import org.fitframework.inspection.Validation;
+import org.fitframework.schedule.ExecutePolicy;
+
+import java.time.Instant;
+import java.util.Optional;
+
+/**
+ * 表示固定延迟时间的执行策略。
+ *
+ * @author 季聿阶
+ * @since 2022-11-15
+ */
+public class FixedDelayExecutePolicy extends AbstractExecutePolicy {
+    private final long delayMillis;
+
+    /**
+     * 使用指定的延迟时间来初始化 {@link FixedDelayExecutePolicy} 的新实例。
+     *
+     * @param delayMillis 表示延迟时间的毫秒数的 {@code long}。
+     * @throws IllegalArgumentException 当 {@code delayMillis} 不是正数时。
+     */
+    public FixedDelayExecutePolicy(long delayMillis) {
+        this.delayMillis =
+                Validation.greaterThan(delayMillis, 0,
+                        "The delay millis must be positive. [delayMillis={0}]", delayMillis);
+    }
+
+    @Override
+    public Optional<Instant> nextExecuteTime(@Nonnull ExecutePolicy.Execution execution, @Nonnull Instant startTime) {
+        this.validateExecutionStatus(execution.status());
+        if (execution.status() == ExecutePolicy.ExecutionStatus.SCHEDULING) {
+            return Optional.of(startTime);
+        } else {
+            Optional<Instant> lastCompleteTime = execution.lastCompleteTime();
+            Validation.isTrue(lastCompleteTime.isPresent(), "The last complete time must be present.");
+            Validation.isFalse(lastCompleteTime.get().isBefore(startTime),
+                    "The last complete time cannot before the start time. [lastCompleteTime={0}, startTime={1}]",
+                    lastCompleteTime.get(),
+                    startTime);
+            return Optional.of(lastCompleteTime.get().plusMillis(this.delayMillis));
+        }
+    }
+}

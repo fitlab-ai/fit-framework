@@ -1,0 +1,211 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.waterflow.domain.stream.reactive;
+
+import org.fitframework.waterflow.domain.context.FlowContext;
+import org.fitframework.waterflow.domain.context.FlowSession;
+import org.fitframework.waterflow.domain.context.repo.flowcontext.FlowContextRepo;
+import org.fitframework.waterflow.domain.context.repo.flowsession.FlowSessionRepo;
+import org.fitframework.waterflow.domain.emitters.EmitterListener;
+import org.fitframework.waterflow.domain.enums.ParallelMode;
+import org.fitframework.waterflow.domain.stream.callbacks.PreSendCallbackInfo;
+import org.fitframework.waterflow.domain.stream.operators.Operators;
+
+import java.util.List;
+import java.util.function.Consumer;
+
+/**
+ * 数据发布者
+ * 发布数据的时候同时确定接收者的数据处理方式
+ * map: 1:1数据处理方式
+ * reduce: n:1数据处理方式
+ * produce: m:n数据处理方式
+ *
+ * @param <I> 要发布的数据类型
+ * @since 1.0
+ */
+public interface Publisher<I> extends StreamIdentity, EmitterListener<I, FlowSession> {
+    /**
+     * 处理数据，即向后续节点offer
+     *
+     * @param data 待offer的数据
+     */
+    default void handle(I data) {
+        this.offer(data);
+    }
+
+    @Override
+    default void handle(I data, FlowSession flowSession) {
+        FlowSession nextSession = FlowSessionRepo.getNextEmitterHandleSession(this.getStreamId(), flowSession);
+        this.offer(data, nextSession);
+        flowSession.getWindow().onDone(this.getStreamId(), () -> nextSession.getWindow().complete());
+    }
+
+    /**
+     * conditions
+     *
+     * @param whether 判定条件
+     * @return Processor
+     */
+    Processor<I, I> conditions(Operators.Whether<I> whether);
+
+    /**
+     * parallel
+     *
+     * @param mode 并行模式
+     * @param whether 判定条件
+     * @return Processor
+     */
+    Processor<I, I> parallel(ParallelMode mode, Operators.Whether<I> whether);
+
+    /**
+     * join
+     *
+     * @param processor 数据处理器
+     * @param whether 判定条件
+     * @param <O> 返回值类型
+     * @return Processor
+     */
+    <O> Processor<I, O> join(Operators.Map<FlowContext<I>, O> processor, Operators.Whether<I> whether);
+
+    /**
+     * just
+     *
+     * @param processor 数据处理器
+     * @param whether 判定条件
+     * @return Processor
+     */
+    Processor<I, I> just(Operators.Just<FlowContext<I>> processor, Operators.Whether<I> whether);
+
+    /**
+     * map
+     *
+     * @param processor 数据处理器
+     * @param whether 判定条件
+     * @param <O> 返回值类型
+     * @return Processor
+     */
+    <O> Processor<I, O> map(Operators.Map<FlowContext<I>, O> processor, Operators.Whether<I> whether);
+
+    /**
+     * 将每个数据通过指定的方式转换为一个数据流，并将数据流的数据往下发射流转。
+     *
+     * @param processor 表示数据转换器的 {@link Operators.FlatMap}{@code <}{@link FlowContext}{@code <}{@link I}{@code
+     * >}{@code , }{@link O}{@code >}。
+     * @param whether 表示判定条件的 {@link Operators.Whether}{@code <}{@link I}{@code >}。
+     * @param <O> 表示数据处理器的输出数据类型。
+     * @return 表示数据处理器的 {@link Processor}{@code <}{@link I}{@code , }{@link O}{@code >}。
+     */
+    <O> Processor<I, O> flatMap(Operators.FlatMap<FlowContext<I>, O> processor, Operators.Whether<I> whether);
+
+    /**
+     * process处理，并往下发射新的数据，支持操作 session KV状态数据
+     *
+     * @param processor 携带数据、KV下文和发射器的处理器
+     * @param whether 判定条件
+     * @param <O> 返回值类型
+     * @return Processor
+     */
+    <O> Processor<I, O> process(Operators.Process<FlowContext<I>, O> processor, Operators.Whether<I> whether);
+
+    /**
+     * subscribe
+     *
+     * @param subscriber 订阅者
+     * @param <O> 订阅者处理的数据类型
+     */
+    <O> void subscribe(Subscriber<I, O> subscriber);
+
+    /**
+     * subscribe
+     *
+     * @param subscriber 订阅者
+     * @param whether 判定条件
+     * @param <O> 订阅者处理的数据类型
+     */
+    <O> void subscribe(Subscriber<I, O> subscriber, Operators.Whether<I> whether);
+
+    /**
+     * subscribe
+     *
+     * @param eventId 事件ID
+     * @param subscriber 订阅者
+     * @param <O> 订阅者处理的数据类型
+     */
+    <O> void subscribe(String eventId, Subscriber<I, O> subscriber);
+
+    /**
+     * subscribe
+     *
+     * @param eventId 事件ID
+     * @param subscriber 订阅者
+     * @param whether 判定条件
+     * @param <O> 订阅者处理的数据类型
+     */
+    <O> void subscribe(String eventId, Subscriber<I, O> subscriber, Operators.Whether<I> whether);
+
+    /**
+     * offer
+     *
+     * @param contexts contexts
+     * @param preSendCallback 在数据发送到下一个节点前触发当前节点完成回调操作
+     */
+    void offer(List<FlowContext<I>> contexts, Consumer<PreSendCallbackInfo<I>> preSendCallback);
+
+    /**
+     * offer
+     *
+     * @param data data
+     * @return String
+     */
+    String offer(I data);
+
+    /**
+     * 在指定的session中offer一个数据
+     *
+     * @param data 待offer的数据
+     * @param session 指定的session
+     * @return 本次offer产生的traceId
+     */
+    String offer(I data, FlowSession session);
+
+    /**
+     * 在指定的session中offer一组数据
+     *
+     * @param data 待offer的数据
+     * @param session 指定的session
+     * @return 本次offer产生的traceId
+     */
+    String offer(I[] data, FlowSession session);
+
+    /**
+     * offer
+     *
+     * @param data data
+     * @return String
+     */
+    String offer(I... data);
+
+    /**
+     * subscribed
+     *
+     * @return boolean
+     */
+    boolean subscribed();
+
+    /**
+     * getSubscriptions
+     *
+     * @return 订阅者列表
+     */
+    List<Subscription<I>> getSubscriptions();
+
+    /**
+     * 获取context repo
+     *
+     * @return repo
+     */
+    FlowContextRepo getFlowContextRepo();
+}

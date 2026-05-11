@@ -1,0 +1,16 @@
+fit:
+  beans:
+    packages:
+    - 'org.fitframework.http.server.netty'
+
+worker:
+  exit:
+    graceful: false
+
+plugin:
+  http-server:
+    netty:
+      core-thread-num: 10
+      max-thread-num: 100
+      queue-capacity: 0
+      display-error: false

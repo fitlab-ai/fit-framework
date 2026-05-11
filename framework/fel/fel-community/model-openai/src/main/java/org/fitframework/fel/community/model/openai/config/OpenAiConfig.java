@@ -1,0 +1,95 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.fel.community.model.openai.config;
+
+import org.fitframework.annotation.AcceptConfigValues;
+import org.fitframework.annotation.Component;
+
+/**
+ * 表示 {@link OpenAiConfig} 的默认实现。
+ *
+ * @author 易文渊
+ * @since 2024-08-12
+ */
+@Component
+@AcceptConfigValues("fel.openai")
+public class OpenAiConfig {
+    private String apiBase = "https://api.openai.com/v1/";
+    private String apiKey = "";
+    private int connectTimeout = 30000;
+    private int readTimeout = 30000;
+
+    /**
+     * 获取 openai 服务地址。
+     *
+     * @return 表示 openai 服务地址的 {@link String}。
+     */
+    public String getApiBase() {
+        return this.apiBase;
+    }
+
+    /**
+     * 设置 openai 服务地址。
+     *
+     * @param apiBase 表示 openai 服务地址的 {@link String}。
+     */
+    public void setApiBase(String apiBase) {
+        this.apiBase = apiBase;
+    }
+
+    /**
+     * 获取 openai 服务密钥。
+     *
+     * @return 表示 openai 服务密钥的 {@link String}。
+     */
+    public String getApiKey() {
+        return this.apiKey;
+    }
+
+    /**
+     * 设置 openai 服务密钥。
+     *
+     * @param apiKey 表示 openai 服务密钥的 {@link String}。
+     */
+    public void setApiKey(String apiKey) {
+        this.apiKey = apiKey;
+    }
+
+    /**
+     * 获取连接获取的超时时间。
+     *
+     * @return 表示连接获取的超时时间的 {@code int}。
+     */
+    public int getConnectTimeout() {
+        return this.connectTimeout;
+    }
+
+    /**
+     * 设置连接获取的超时时间。
+     *
+     * @param connectTimeout 表示连接获取的超时时间的 {@code int}。
+     */
+    public void setConnectTimeout(int connectTimeout) {
+        this.connectTimeout = connectTimeout;
+    }
+
+    /**
+     * 获取读取的超时时间。
+     *
+     * @return 表示读取的超时时间的 {@code int}。
+     */
+    public int getReadTimeout() {
+        return this.readTimeout;
+    }
+
+    /**
+     * 设置读取超时时间。
+     *
+     * @param readTimeout 表示读取超时时间的 {@code int}。
+     */
+    public void setReadTimeout(int readTimeout) {
+        this.readTimeout = readTimeout;
+    }
+}

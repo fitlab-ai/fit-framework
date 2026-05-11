@@ -1,0 +1,9 @@
+fit:
+  beans:
+    packages:
+    - 'org.fitframework.http.openapi3.swagger'
+server:
+  http:
+    resources:
+      file-locations:
+      - 'static'

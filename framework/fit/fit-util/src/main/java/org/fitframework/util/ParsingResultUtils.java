@@ -1,0 +1,23 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.util;
+
+import org.fitframework.util.support.DefaultParsingResult;
+
+/**
+ * 为 {@link ParsingResult} 提供工具方法。
+ *
+ * @author 梁济时
+ * @since 2020-07-24
+ */
+class ParsingResultUtils {
+    /** 表示失败的转换结果。 */
+    public static final ParsingResult<?> FAILED = new DefaultParsingResult<>(false, null);
+
+    /**
+     * 隐藏默认构造方法，避免工具类被实例化。
+     */
+    private ParsingResultUtils() {}
+}

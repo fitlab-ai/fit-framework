@@ -1,0 +1,400 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.waterflow.domain.context.repo.flowcontext;
+
+import org.fitframework.waterflow.ErrorCodes;
+import org.fitframework.waterflow.domain.context.FlowContext;
+import org.fitframework.waterflow.domain.context.FlowTrace;
+import org.fitframework.waterflow.domain.context.TraceOwner;
+import org.fitframework.waterflow.domain.stream.operators.Operators;
+import org.fitframework.waterflow.exceptions.WaterflowException;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/**
+ * 流程上下文持久化Repo核心类型
+ * 包含FlowContextMemoRepo和FlowContextPersistRepo两种实现
+ *
+ * @author 高诗意
+ * @since 1.0
+ */
+public interface FlowContextRepo {
+    /**
+     * 人工任务节点拉取边上的上下文，在节点的preprocess中处理
+     *
+     * @param <T> 泛型类型，表示上下文的数据类型
+     * @param streamId 版本ID
+     * @param posIds posId列表
+     * @param status 状态
+     * @return 上下文列表
+     */
+    <T> List<FlowContext<T>> getContextsByPosition(String streamId, List<String> posIds, String status);
+
+    /**
+     * 获取节点处理完后产生的新的context，发送给下个节点处理，后续可以判断是否删除该方法
+     *
+     * @param <T> 泛型类型，表示上下文的数据类型
+     * @param streamId 版本ID
+     * @param posId posId
+     * @param batchId 批次ID
+     * @param status 状态
+     * @return 上下文列表
+     */
+    <T> List<FlowContext<T>> getContextsByPosition(String streamId, String posId, String batchId, String status);
+
+    /**
+     * 根据traceId查询所有的context对象
+     *
+     * @param <T> 泛型类型，表示上下文的数据类型
+     * @param traceId traceId
+     * @return 上下文列表
+     */
+    <T> List<FlowContext<T>> findWithoutFlowDataByTraceId(String traceId);
+
+    /**
+     * 根据traceId获取上下文
+     *
+     * @param <T> 泛型类型，表示上下文的数据类型
+     * @param traceId traceId
+     * @return 上下文列表
+     */
+    <T> List<FlowContext<T>> getContextsByTrace(String traceId);
+
+    /**
+     * 批量保存context
+     *
+     * @param <I> 泛型类型，表示上下文的数据类型
+     * @param contexts 上下文列表
+     */
+    <I> void save(List<FlowContext<I>> contexts);
+
+    /**
+     * 批量更新context的上下文数据flowData字段
+     *
+     * @param <I> 泛型类型，表示上下文的数据类型
+     * @param contexts contexts
+     */
+    <I> void updateFlowDataAndToBatch(List<FlowContext<I>> contexts);
+
+    /**
+     * 批量更新上下文数据
+     *
+     * @param <I> 泛型类型，表示上下文的数据类型
+     * @param flowDataList 数据列表（contextId, T）
+     */
+    <I> void updateFlowData(Map<String, I> flowDataList);
+
+    /**
+     * 批量更新context的内容，不更新status和position
+     *
+     * @param <I> 泛型类型，表示上下文的数据类型
+     * @param contexts 上下文列表
+     */
+    default <I> void update(List<FlowContext<I>> contexts) {
+        save(contexts);
+    }
+
+    /**
+     * 更新context的状态为已发送
+     *
+     * @param <I> 泛型类型，表示上下文的数据类型
+     * @param contexts 上下文列表
+     */
+    <I> void updateToSent(List<FlowContext<I>> contexts);
+
+    /**
+     * 根据parallelId获取上下文
+     *
+     * @param <T> 泛型类型，表示上下文的数据类型
+     * @param parallelId 并行ID
+     * @return 上下文列表
+     */
+    <T> List<FlowContext<T>> getContextsByParallel(String parallelId);
+
+    /**
+     * 根据id获取上下文
+     *
+     * @param <T> 泛型类型，表示上下文的数据类型
+     * @param id 上下文ID
+     * @return 上下文对象
+     */
+    <T> FlowContext<T> getById(String id);
+
+    /**
+     * 根据ids查找FlowContext
+     *
+     * @param <T> 泛型类型，表示上下文的数据类型
+     * @param ids 上下文ID列表
+     * @return 上下文列表
+     */
+    <T> List<FlowContext<T>> getByIds(List<String> ids);
+
+    /**
+     * 根据toBatch查找FlowContext
+     *
+     * @param <T> 泛型类型，表示上下文的数据类型
+     * @param toBatchIds 上下文toBatch
+     * @return 上下文列表
+     */
+    <T> List<FlowContext<T>> getByToBatch(List<String> toBatchIds);
+
+    /**
+     * 查找和指定一批ID对应的状态为PENDING且SENT了的流程上下文
+     *
+     * @param <T> 泛型类型，表示上下文的数据类型
+     * @param ids 上下文ID列表
+     * @return 上下文列表
+     */
+    <T> List<FlowContext<T>> getPendingAndSentByIds(List<String> ids);
+
+    /**
+     * 查找map节点所有from事件上待处理的上下文
+     *
+     * @param <T> 泛型类型，表示上下文的数据类型
+     * @param streamId 流程版本ID
+     * @param subscriptions from事件的事件ID列表
+     * @param sessions 涉及保序的sessions
+     * @return 待处理的上下文列表
+     */
+    <T> List<FlowContext<T>> requestMappingContext(String streamId, List<String> subscriptions,
+            Map<String, Integer> sessions);
+
+    /**
+     * 查找produce节点所有from事件上待处理的上下文
+     *
+     * @param <T> 泛型类型，表示上下文的数据类型
+     * @param streamId 流程版本ID
+     * @param subscriptions from事件的事件ID列表
+     * @param filter filter校验器
+     * @return 待处理的上下文列表
+     */
+    <T> List<FlowContext<T>> requestProducingContext(String streamId, List<String> subscriptions,
+            Operators.Filter<T> filter);
+
+    /**
+     * 查找流程对应版本所有上下文
+     *
+     * @param <T> 泛型类型，表示上下文的数据类型
+     * @param metaId 流程metaId标识
+     * @param version 流程对应版本
+     * @return 对应所有上下文列表
+     */
+    default <T> List<FlowContext<T>> findByStreamId(String metaId, String version) {
+        throw new WaterflowException(ErrorCodes.FLOW_ENGINE_DATABASE_NOT_SUPPORT, "findByStreamId");
+    }
+
+    /**
+     * 查找流程对应版本正在运行的上下文
+     *
+     * @param metaId metaId 流程metaId标识
+     * @param version 流程对应版本
+     * @return 对应所有上下文
+     */
+    default Integer findRunningContextCountByMetaId(String metaId, String version) {
+        throw new WaterflowException(ErrorCodes.FLOW_ENGINE_DATABASE_NOT_SUPPORT, "findRunningContextCountByMetaId");
+    }
+
+    /**
+     * 查找流程对应版本正在运行的上下文
+     *
+     * @param <T> 泛型类型，表示上下文的数据类型
+     * @param metaId metaId 流程metaId标识
+     * @param version 流程对应版本
+     * @return 对应所有上下文列表
+     */
+    default <T> List<FlowContext<T>> findRunningContextByMetaId(String metaId, String version) {
+        throw new WaterflowException(ErrorCodes.FLOW_ENGINE_DATABASE_NOT_SUPPORT, "findRunningContextByMetaId");
+    }
+
+    /**
+     * 删除流程对应版本所有上下文
+     *
+     * @param metaId metaId 流程metaId标识
+     * @param version 流程对应版本
+     */
+    default void delete(String metaId, String version) {
+        throw new WaterflowException(ErrorCodes.FLOW_ENGINE_DATABASE_NOT_SUPPORT, "delete");
+    }
+
+    /**
+     * 批量更新trace的contextPool
+     *
+     * @param <T> 泛型类型，表示上下文的数据类型
+     * @param after 更新后的上下文列表
+     * @param traces 需要更新的traceId列表
+     */
+    default <T> void updateContextPool(List<FlowContext<T>> after, Set<String> traces) {
+        save(after);
+    }
+
+    /**
+     * 保存contexts
+     *
+     * @param <T> 泛型类型，表示上下文的数据类型
+     * @param trace 对应的trace
+     * @param flowContext 待保存的contexts
+     */
+    <T> void save(FlowTrace trace, FlowContext<T> flowContext);
+
+    /**
+     * 批量更新context的上下文数据flowData字段
+     *
+     * @param <T> 泛型类型，表示上下文的数据类型
+     * @param contexts 上下文列表
+     */
+    <T> void updateFlowData(List<FlowContext<T>> contexts);
+
+    /**
+     * 批量更新context的status和position
+     *
+     * @param <T> 泛型类型，表示上下文的数据类型
+     * @param contexts 上下文列表
+     * @param status 状态
+     * @param position 位置
+     */
+    default <T> void updateStatus(List<FlowContext<T>> contexts, String status, String position) {
+        save(contexts);
+    }
+
+    /**
+     * 更新context和trace的状态
+     *
+     * @param traceIds traceIds列表
+     */
+    default void updateToTerminated(List<String> traceIds) {
+    }
+
+    /**
+     * 判断trace终止
+     *
+     * @param traceIds traceIds列表
+     * @return 是否终止
+     */
+    default boolean isTracesTerminate(List<String> traceIds) {
+        return false;
+    }
+
+    /**
+     * 更新序号
+     *
+     * @param <T> 泛型类型，表示上下文的数据类型
+     * @param contexts 上下文信息
+     */
+    <T> void updateIndex(List<FlowContext<T>> contexts);
+
+    /**
+     * 获取链路标识管理对象。
+     *
+     * @return 链路标识管理对象。
+     */
+    default TraceOwner getTraceOwner() {
+        throw new WaterflowException(ErrorCodes.FLOW_ENGINE_DATABASE_NOT_SUPPORT, "getTraceOwner");
+    }
+
+    /**
+     * deleteByContextIds
+     *
+     * @param contextIds contextIds
+     */
+    default void deleteByContextIds(List<String> contextIds) {
+        throw new WaterflowException(ErrorCodes.FLOW_ENGINE_DATABASE_NOT_SUPPORT, "deleteByContextIds");
+    }
+
+    /**
+     * 根据transId获取stream id
+     *
+     * @param flowTransId trans id
+     * @return stream id
+     */
+    default String getStreamIdByTransId(String flowTransId) {
+        throw new WaterflowException(ErrorCodes.FLOW_ENGINE_DATABASE_NOT_SUPPORT, "getStreamIdByTransId");
+    }
+
+    /**
+     * 根据transId获取traceId
+     *
+     * @param transId transId
+     * @return traceId
+     */
+    default List<String> getTraceByTransId(String transId) {
+        throw new WaterflowException(ErrorCodes.FLOW_ENGINE_DATABASE_NOT_SUPPORT, "getTraceByTransId");
+    }
+
+    /**
+     * 根据transId删除上下文
+     *
+     * @param transId trans id
+     */
+    default void deleteByTransId(String transId) {
+        throw new WaterflowException(ErrorCodes.FLOW_ENGINE_DATABASE_NOT_SUPPORT, "deleteByTransId");
+    }
+
+    /**
+     * 根据链路唯一标识查询所有错误上下文。
+     *
+     * @param <T> 泛型类型，表示上下文的数据类型。
+     * @param traceId 链路唯一标识。
+     * @return 错误上下文集合。
+     */
+    default <T> List<FlowContext<T>> findErrorContextsByTraceId(String traceId) {
+        throw new WaterflowException(ErrorCodes.FLOW_ENGINE_DATABASE_NOT_SUPPORT, "findErrorContextsByTraceId");
+    }
+
+    /**
+     * 至少含有一个符合状态的上下文。
+     *
+     * @param statusList 状态列表。
+     * @param traceId 链路唯一标识。
+     * @return true or false。
+     */
+    default boolean hasContextWithStatus(List<String> statusList, String traceId) {
+        throw new WaterflowException(ErrorCodes.FLOW_ENGINE_DATABASE_NOT_SUPPORT, "hasContextWithStatus");
+    }
+
+    /**
+     * 所有上下文状态都符合要求。
+     *
+     * @param statusList 状态列表。
+     * @param traceId 链路唯一标识。
+     * @return true or false。
+     */
+    default boolean isAllContextStatus(List<String> statusList, String traceId) {
+        throw new WaterflowException(ErrorCodes.FLOW_ENGINE_DATABASE_NOT_SUPPORT, "isAllContextStatus");
+    }
+
+    /**
+     * 在某个节点至少含有一个符合状态的上下文。
+     *
+     * @param statusList 状态列表.
+     * @param traceId 链路唯一标识。
+     * @param position 位置.
+     * @return true or false
+     */
+    default boolean hasContextWithStatusAtPosition(List<String> statusList, String traceId, String position) {
+        throw new WaterflowException(ErrorCodes.FLOW_ENGINE_DATABASE_NOT_SUPPORT, "hasContextWithStatusAtPosition");
+    }
+
+    /**
+     * 根据链路唯一标识获取运行实例标识。
+     *
+     * @param traceId 链路唯一标识。
+     * @return 运行实例标识。
+     */
+    default String getTransIdByTrace(String traceId) {
+        throw new WaterflowException(ErrorCodes.FLOW_ENGINE_DATABASE_NOT_SUPPORT, "getTransIdByTrace");
+    }
+
+    /**
+     * 根据链路唯一标识列表删除对应的上下文数据。
+     *
+     * @param traceIdList 表示链路唯一标识列表的 {@link List}{@code <}{@link String}{@code >}。
+     */
+    default void deleteByTraceIdList(List<String> traceIdList) {
+        throw new WaterflowException(ErrorCodes.FLOW_ENGINE_DATABASE_NOT_SUPPORT, "deleteByTraceIdList");
+    }
+}
+

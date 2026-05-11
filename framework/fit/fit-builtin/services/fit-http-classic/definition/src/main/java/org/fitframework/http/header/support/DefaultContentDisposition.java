@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.http.header.support;
+
+import static org.fitframework.inspection.Validation.notNull;
+
+import org.fitframework.http.header.ContentDisposition;
+import org.fitframework.http.header.HeaderValue;
+
+import java.util.Optional;
+
+/**
+ * 表示 {@link ContentDisposition} 的默认实现。
+ *
+ * @author 季聿阶
+ * @since 2022-09-04
+ */
+public class DefaultContentDisposition extends DefaultHeaderValue implements ContentDisposition {
+    private static final String NAME = "name";
+    private static final String FILENAME = "filename";
+    private static final String FILENAME_STAR = "filename*";
+
+    /**
+     * 使用指定的消息头初始化 {@link DefaultContentDisposition} 的新实例。
+     *
+     * @param headerValue 表示消息头的 {@link HeaderValue}。
+     * @throws IllegalArgumentException 当 {@code headerValue} 为 {@code null} 时。
+     */
+    public DefaultContentDisposition(HeaderValue headerValue) {
+        super(notNull(headerValue, "The header value cannot be null.").value(), headerValue.parameters());
+    }
+
+    @Override
+    public Optional<String> name() {
+        return this.parameters().get(NAME);
+    }
+
+    @Override
+    public Optional<String> fileName() {
+        return this.parameters().get(FILENAME);
+    }
+
+    @Override
+    public Optional<String> fileNameStar() {
+        return this.parameters().get(FILENAME_STAR);
+    }
+}

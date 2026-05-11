@@ -1,0 +1,53 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.pattern.builder;
+
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+
+/**
+ * 对象的动态代理。
+ *
+ * @author 梁济时
+ * @author 季聿阶
+ * @since 2022-06-22
+ */
+public class ObjectInvocationHandler implements InvocationHandler {
+    private final Class<?> objectClass;
+    private final Map<String, Object> fields;
+
+    /**
+     * 使用指定的对象类型和字段映射来初始化 {@link ObjectInvocationHandler} 的新实例。
+     *
+     * @param objectClass 表示对象类型的 {@link Class}{@code <?>}。
+     * @param fields 表示对象字段映射的 {@link Map}{@code <}{@link String}{@code , }{@link Object}{@code >}。
+     */
+    public ObjectInvocationHandler(Class<?> objectClass, Map<String, Object> fields) {
+        this.objectClass = objectClass;
+        this.fields = fields;
+    }
+
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        if (Objects.equals(method.getName(), ObjectMethodUtils.getToMapMethodName())) {
+            return this.fields;
+        } else if (method.getDeclaringClass() == Object.class) {
+            return ObjectMethodUtils.invokeObjectMethod(method, args, this.objectClass, this.fields);
+        } else if (method.isDefault()) {
+            throw new UnsupportedOperationException("Not supported default method to invoke.");
+        } else {
+            if (args == null || args.length < 1) {
+                return fields.get(method.getName());
+            } else {
+                throw new IllegalStateException(String.format(Locale.ROOT,
+                        "Method to read property cannot contain arguments. [class=%s, method=%s]",
+                        method.getDeclaringClass().getName(), method.getName()));
+            }
+        }
+    }
+}

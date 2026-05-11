@@ -1,0 +1,50 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025-2026 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.validation.data;
+
+import org.fitframework.http.annotation.PostMapping;
+import org.fitframework.http.annotation.RequestBody;
+import org.fitframework.http.annotation.RequestMapping;
+import org.fitframework.http.annotation.RequestParam;
+import org.fitframework.annotation.Component;
+import org.fitframework.validation.Validated;
+
+import javax.validation.Valid;
+import javax.validation.constraints.NotBlank;
+
+/**
+ * 表示评估注解验证数据接口集。
+ *
+ * @author 阮睿
+ * @since 2025-07-18
+ */
+@Component
+@Validated
+@RequestMapping(path = "/validation", group = "评估注解验证数据接口")
+public class ValidationDataController {
+    /**
+     * Company 类默认分组注解验证。
+     *
+     * @param company 表示注解验证类 {@link Company}。
+     */
+    @PostMapping(path = "/company/default", description = "验证 Company 类默认分组注解")
+    public void validateCompanyDefaultGroup(@RequestBody @Valid Company company) {}
+
+    /**
+     * Company 类特定分组注解验证。
+     *
+     * @param company 表示注解验证类 {@link Company}。
+     */
+    @PostMapping(path = "/company/companyGroup", description = "验证 Company 类特定分组注解")
+    public void validateCompanyGroup(@RequestBody @Valid Company company) {}
+
+    /**
+     * 验证 RequestParam 参数的 NotBlank 约束。
+     *
+     * @param name 表示待校验的名字参数的 {@link String}。
+     */
+    @PostMapping(path = "/param/notblank", description = "验证 RequestParam 参数的 NotBlank 约束")
+    public void validateRequestParamNotBlank(@RequestParam("name") @NotBlank String name) {}
+}

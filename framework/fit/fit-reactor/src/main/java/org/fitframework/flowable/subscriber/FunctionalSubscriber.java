@@ -1,0 +1,84 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.flowable.subscriber;
+
+import static org.fitframework.inspection.Validation.notNull;
+
+import org.fitframework.flowable.Choir;
+import org.fitframework.flowable.Solo;
+import org.fitframework.flowable.Subscriber;
+import org.fitframework.flowable.Subscription;
+import org.fitframework.inspection.Nonnull;
+
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+
+/**
+ * 表示使用 Lambda 表达式进行订阅的 {@link Subscriber 订阅者}。
+ *
+ * @param <T> 表示订阅者订阅的数据类型的 {@link T}。
+ * @author 季聿阶
+ * @since 2024-02-07
+ */
+public class FunctionalSubscriber<T> extends AbstractSubscriber<T> {
+    /** 表示 {@link Choir} 在 {@link #onSubscribed(Subscription)} 方法被调用时的默认行为。 */
+    public static final Consumer<Subscription> DEFAULT_ON_SUBSCRIBED_CHOIR_ACTION =
+            subscription -> subscription.request(Long.MAX_VALUE);
+
+    /** 表示 {@link Solo} 在 {@link #onSubscribed(Subscription)} 方法被调用时的默认行为。 */
+    public static final Consumer<Subscription> DEFAULT_ON_SUBSCRIBED_SOLO_ACTION =
+            subscription -> subscription.request(1);
+
+    /** 表示订阅者在 {@link #consume(Object)} 方法被调用时的空行为。 */
+    public static final BiConsumer<Subscription, Object> EMPTY_CONSUME_ACTION = (subscription, data) -> {};
+
+    /** 表示订阅者在 {@link #complete()} 方法被调用时的空行为。 */
+    public static final Consumer<Subscription> EMPTY_COMPLETE_ACTION = (subscription) -> {};
+
+    /** 表示订阅者在 {@link #fail(Exception)} 方法被调用时的空行为。 */
+    public static final BiConsumer<Subscription, Exception> EMPTY_FAIL_ACTION = (subscription, cause) -> {};
+
+    private final Consumer<Subscription> onScribedAction;
+    private final BiConsumer<Subscription, T> consumeAction;
+    private final Consumer<Subscription> completeAction;
+    private final BiConsumer<Subscription, Exception> failAction;
+
+    /**
+     * 使用指定的订阅动作、消费动作、完成动作和失败动作初始化 {@link FunctionalSubscriber} 的新实例。
+     *
+     * @param onSubscribedAction 表示订阅动作的 {@link Consumer}{@code <}{@link Subscription}{@code >}。
+     * @param consumeAction 表示消费动作的 {@link BiConsumer}{@code <}{@link Subscription}{@code , }{@link T}{@code >}。
+     * @param completeAction 表示完成动作的 {@link Consumer}{@code <}{@link Subscription}{@code >}。
+     * @param failAction 表示失败动作的 {@link BiConsumer}{@code <}{@link Subscription}{@code , }{@link Exception}{@code >}。
+     * @throws IllegalArgumentException 当任一参数为 {@code null} 时。
+     */
+    public FunctionalSubscriber(Consumer<Subscription> onSubscribedAction, BiConsumer<Subscription, T> consumeAction,
+            Consumer<Subscription> completeAction, BiConsumer<Subscription, Exception> failAction) {
+        this.onScribedAction = notNull(onSubscribedAction, "The action on subscribed cannot be null.");
+        this.consumeAction = notNull(consumeAction, "The action to consume data cannot be null.");
+        this.completeAction = notNull(completeAction, "The action on complete cannot be null.");
+        this.failAction = notNull(failAction, "The action on fail cannot be null.");
+    }
+
+    @Override
+    protected void onSubscribed0(@Nonnull Subscription subscription) {
+        this.onScribedAction.accept(subscription);
+    }
+
+    @Override
+    protected void consume(@Nonnull Subscription subscription, T data) {
+        this.consumeAction.accept(subscription, data);
+    }
+
+    @Override
+    protected void complete(@Nonnull Subscription subscription) {
+        this.completeAction.accept(subscription);
+    }
+
+    @Override
+    protected void fail(@Nonnull Subscription subscription, Exception cause) {
+        this.failAction.accept(subscription, cause);
+    }
+}

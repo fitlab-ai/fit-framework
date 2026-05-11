@@ -1,0 +1,11 @@
+fit:
+  beans:
+    packages:
+    - 'org.fitframework.service'
+    - 'org.fitframework.heartbeat'
+
+matata:
+  registry:
+    nacos:
+      weight: 1
+      isEphemeral: true

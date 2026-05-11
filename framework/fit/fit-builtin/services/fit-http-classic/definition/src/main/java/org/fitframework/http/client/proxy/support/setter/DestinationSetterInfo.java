@@ -1,0 +1,52 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.http.client.proxy.support.setter;
+
+import static org.fitframework.inspection.Validation.notNull;
+
+import org.fitframework.http.client.proxy.DestinationSetter;
+import org.fitframework.util.ObjectUtils;
+import org.fitframework.util.StringUtils;
+
+/**
+ * 表示数据设置器的相关信息。
+ *
+ * @author 王攀博
+ * @since 2024-06-12
+ */
+public class DestinationSetterInfo {
+    private final DestinationSetter destinationSetter;
+    private final String sourcePath;
+
+    /**
+     * 使用指定的目标设置器和源路径初始化 {@link DestinationSetterInfo} 的新实例。
+     *
+     * @param destinationSetter 表示目标设置器的 {@link DestinationSetter}。
+     * @param sourcePath 表示源路径的 {@link String}。
+     * @throws IllegalArgumentException 当 {@code destinationSetter} 为 {@code null} 时。
+     */
+    public DestinationSetterInfo(DestinationSetter destinationSetter, String sourcePath) {
+        this.destinationSetter = notNull(destinationSetter, "The destination setter cannot be null.");
+        this.sourcePath = ObjectUtils.nullIf(sourcePath, StringUtils.EMPTY);
+    }
+
+    /**
+     * 获取数据设置器。
+     *
+     * @return 表示获取到的数据设置器的 {@link DestinationSetter}。
+     */
+    public DestinationSetter destinationSetter() {
+        return this.destinationSetter;
+    }
+
+    /**
+     * 获取在源数据中的路径。
+     *
+     * @return 表示获取在源数据中的路径的 {@link String}。
+     */
+    public String sourcePath() {
+        return this.sourcePath;
+    }
+}

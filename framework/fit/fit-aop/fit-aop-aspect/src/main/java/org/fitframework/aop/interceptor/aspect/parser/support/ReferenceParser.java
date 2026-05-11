@@ -1,0 +1,118 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.aop.interceptor.aspect.parser.support;
+
+import static org.fitframework.util.ObjectUtils.nullIf;
+
+import org.fitframework.aop.annotation.Pointcut;
+import org.fitframework.aop.interceptor.aspect.parser.PointcutParameter;
+import org.fitframework.aop.interceptor.aspect.parser.model.PointcutSupportedType;
+import org.fitframework.inspection.Validation;
+import org.fitframework.ioc.annotation.AnnotationMetadata;
+import org.fitframework.ioc.annotation.AnnotationMetadataResolver;
+import org.fitframework.ioc.annotation.AnnotationMetadataResolvers;
+import org.fitframework.util.StringUtils;
+
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * 解析切点 {@link Pointcut} 的解析器。
+ * <p>表达式的组合，就是对应的表达式的逻辑运算，与、或、非。</p>
+ *
+ * @author 白鹏坤
+ * @since 2023-03-17
+ */
+public class ReferenceParser extends BaseParser {
+    /** 方法签名的正则匹配：方法名(参数)。 */
+    private static final String METHOD_REGEX = "[a-zA-Z0-9_$]*\\(.*\\)";
+
+    private final Class<?> inScope;
+    private final PointcutParameter[] parameters;
+
+    /**
+     * 使用指定的作用域类和切点参数初始化 {@link ReferenceParser} 的新实例。
+     *
+     * @param inScope 表示作用域类的 {@link Class}{@code <?>}。
+     * @param parameters 表示切点参数的 {@link PointcutParameter}{@code []}。
+     */
+    public ReferenceParser(Class<?> inScope, PointcutParameter[] parameters) {
+        this.inScope = inScope;
+        this.parameters = nullIf(parameters, new PointcutParameter[0]);
+    }
+
+    @Override
+    public boolean couldParse(String expression) {
+        return expression.matches(METHOD_REGEX);
+    }
+
+    @Override
+    public Result parse(String expression) {
+        return new ReferenceParserResult(expression);
+    }
+
+    @Override
+    protected PointcutSupportedType parserType() {
+        return PointcutSupportedType.REFERENCE;
+    }
+
+    @Override
+    protected Result createConcreteParser(String content) {
+        return new ReferenceParserResult(content);
+    }
+
+    class ReferenceParserResult extends BaseParser.BaseResult {
+        public ReferenceParserResult(String content) {
+            super(content, null);
+        }
+
+        @Override
+        public Object content() {
+            final int index = this.content.indexOf("(");
+            Validation.between(index,
+                    0,
+                    this.content.length() - 1,
+                    "Pointcut format error. [pointcut={0}]",
+                    this.content);
+            final String paramsString =
+                    this.content.substring(index + 1, this.content.length() - 1).replaceAll(" ", "");
+            final String[] params = StringUtils.split(paramsString, ",");
+            String methodName = this.content.substring(0, index);
+            Method[] methods = ReferenceParser.this.inScope.getDeclaredMethods();
+            final Method matchedMethod = Arrays.stream(methods)
+                    .filter(method -> Objects.equals(method.getName(), methodName)
+                            && Arrays.equals(method.getParameterTypes(),
+                            this.getTypeList(ReferenceParser.this.parameters, params)))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Can not found matched method: " + methodName));
+            AnnotationMetadataResolver metadataResolver = AnnotationMetadataResolvers.create();
+            AnnotationMetadata annotationMetadata = metadataResolver.resolve(matchedMethod);
+            Pointcut annotation = annotationMetadata.getAnnotation(Pointcut.class);
+            Validation.notNull(annotation, "Can not found @Pointcut annotation.");
+            return annotation.pointcut();
+        }
+
+        private Class<?>[] getTypeList(PointcutParameter[] parameters, String[] params) {
+            final List<Class<?>> list = new ArrayList<>();
+            for (String param : params) {
+                for (PointcutParameter parameter : parameters) {
+                    if (Objects.equals(parameter.getName(), param)) {
+                        list.add(parameter.getType());
+                        break;
+                    }
+                }
+            }
+            return list.toArray(new Class<?>[0]);
+        }
+
+        @Override
+        public boolean isBinding() {
+            return false;
+        }
+    }
+}

@@ -1,0 +1,68 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.waterflow.domain.stream.nodes;
+
+import org.fitframework.waterflow.domain.context.FlowContext;
+import org.fitframework.waterflow.domain.context.repo.flowcontext.FlowContextRepo;
+import org.fitframework.waterflow.domain.stream.reactive.Subscriber;
+
+import java.util.List;
+
+/**
+ * 流程错误重试机制
+ * 有业务更新发生错误后的context，并决定是否重试
+ *
+ * @author 高诗意
+ * @since 1.0
+ */
+public class Retryable<I> {
+    private final FlowContextRepo repo;
+
+    private final Subscriber<I, ?> to;
+
+    /**
+     * 构造方法
+     *
+     * @param repo 仓库
+     * @param to 订阅者
+     */
+    public Retryable(FlowContextRepo repo, Subscriber<I, ?> to) {
+        this.repo = repo;
+        this.to = to;
+    }
+
+    /**
+     * 是否需要重试
+     *
+     * @param exception 出现的异常
+     * @param contexts 异常上下文信息
+     * @return 是否需要重试
+     */
+    public boolean isNeedRetry(Exception exception, List<FlowContext<I>> contexts) {
+        return false;
+    }
+
+    /**
+     * 发生错误后，处理contexts上下文
+     *
+     * @param exception 异常
+     * @param contexts 需要错误处理的context列表
+     */
+    public void process(Exception exception, List<FlowContext<I>> contexts) {
+        this.repo.update(contexts);
+        this.repo.updateStatus(contexts, contexts.get(0).getStatus().toString(), contexts.get(0).getPosition());
+    }
+
+    /**
+     * 发生错误后，处理contexts上下文，并且发起重试
+     *
+     * @param exception 异常
+     * @param contexts 需要错误处理的context列表
+     */
+    public void retry(Exception exception, List<FlowContext<I>> contexts) {
+        this.process(exception, contexts);
+        to.onProcess(null, contexts, false);
+    }
+}

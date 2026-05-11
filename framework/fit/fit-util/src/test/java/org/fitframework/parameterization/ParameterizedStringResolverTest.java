@@ -1,0 +1,316 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.parameterization;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
+
+import org.fitframework.util.IoUtils;
+import org.fitframework.util.MapBuilder;
+import org.fitframework.util.StringUtils;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 为 {@link ParameterizedStringResolver} 提供单元测试。
+ *
+ * @author 梁济时
+ * @author 季聿阶
+ * @since 2020-07-24
+ */
+public class ParameterizedStringResolverTest {
+    /** 表示用以测试的参数前缀。 */
+    private static final String PREFIX = "${";
+
+    /** 表示用以测试的参数后缀。 */
+    private static final String SUFFIX = "}";
+
+    /** 表示用以测试的转义符。 */
+    private static final char ESCAPE_CHARACTER = '/';
+
+    /** 表示用以测试的空白转义符。 */
+    private static final char EMPTY_ESCAPE_CHARACTER = '\0';
+
+    /** 表示用以测试的源字符串。 */
+    private static final String SOURCE_STRING = "Variable test. [variable=${/variable}]/${";
+
+    /** 表示用以测试的解析后的字符串。 */
+    private static final String FORMATTED_STRING = "Variable test. [variable=myVariable]${";
+
+    /** 表示用以测试的无效的前缀。 */
+    private static final String ILLEGAL_PREFIX = "/${";
+
+    /** 表示用以测试的无效的后缀。 */
+    private static final String ILLEGAL_SUFFIX = "/}";
+
+    /** 表示用以测试的变量的名称。 */
+    private static final String VARIABLE_NAME = "variable";
+
+    /** 表示用以测试的变量的值。 */
+    private static final String VARIABLE_VALUE = "myVariable";
+
+    /** 表示变量的位置。 */
+    private static final int VARIABLE_POSITION = 25;
+
+    /** 表示用以测试的变量的映射。 */
+    private static final Map<String, Object> VARIABLES = Collections.singletonMap(VARIABLE_NAME, VARIABLE_VALUE);
+
+    private static ParameterizedString getParameterizedString(String format) {
+        ParameterizedStringResolver resolver = ParameterizedStringResolver.create(PREFIX, SUFFIX, ESCAPE_CHARACTER);
+        ParameterizedString parameterizedString = resolver.resolve(format);
+        assertThat(parameterizedString).isNotNull();
+        return parameterizedString;
+    }
+
+    /**
+     * <p>解析字符串，结果正确。</p>
+     */
+    @Test
+    public void should_return_result_when_resolved() {
+        ParameterizedString result = getParameterizedString(SOURCE_STRING);
+        assertThat(result).isNotNull();
+        assertThat(result.getOriginalString()).isEqualTo(SOURCE_STRING);
+
+        List<ResolvedParameter> variables = result.getParameters();
+        assertThat(variables).isNotNull().hasSize(1);
+        ResolvedParameter variable = variables.get(0);
+        assertThat(variable).isNotNull();
+        assertThat(variable.getName()).isEqualTo(VARIABLE_NAME);
+        assertThat(variable.getPosition()).isEqualTo(VARIABLE_POSITION);
+
+        String formattedString = result.format(VARIABLES);
+        assertThat(formattedString).isEqualTo(FORMATTED_STRING);
+    }
+
+    /**
+     * 目标方法：{@link ParameterizedStringResolver#resolve(String)}
+     * <p>当以被转义的转义字符结尾时，解析后的字符串正确。</p>
+     */
+    @Test
+    public void should_return_parameterized_string_when_end_with_escaped_escape_character() {
+        final String originalString = "Parameterized string. //";
+        final String escapedString = "Parameterized string. /";
+        ParameterizedString parameterizedString = getParameterizedString(originalString);
+        assertThat(parameterizedString).isNotNull();
+        String resolvedString = parameterizedString.format(null);
+        assertThat(resolvedString).isNotNull().isEqualTo(escapedString);
+    }
+
+    /**
+     * 目标方法：{@link ParameterizedString#format(Map)}
+     * <p>当参数化字符串中仅包含参数时，格式化的结果正确。</p>
+     */
+    @Test
+    public void should_return_formatted_string_when_only_parameters() {
+        final String originalString = "${start}${end}";
+        Map<String, Object> parameters =
+                MapBuilder.<String, Object>get().put("start", "MyStartParameter").put("end", "MyEndParameter").build();
+        final String resolvedString = "MyStartParameterMyEndParameter";
+        ParameterizedString parameterizedString = getParameterizedString(originalString);
+        String result = parameterizedString.format(parameters);
+        assertThat(result).isEqualTo(resolvedString);
+    }
+
+    /**
+     * 目标方法：{@link ParameterizedString#format(Map)}
+     * <p>当参数名称中包含转义字符时，格式化结果正确。</p>
+     */
+    @Test
+    public void should_return_formatted_string_when_parameter_contains_escape_character() {
+        final String originalString = "${parameter/{in/}}";
+        Map<String, Object> parameters = MapBuilder.<String, Object>get().put("parameter{in}", "parameter-in").build();
+        final String resolvedString = "parameter-in";
+        ParameterizedString parameterizedString = getParameterizedString(originalString);
+        String result = parameterizedString.format(parameters);
+        assertThat(result).isNotNull().isEqualTo(resolvedString);
+    }
+
+    /**
+     * 目标方法：{@link ParameterizedStringResolver#create(String, String, char)}
+     * <p>当变量前缀为 {@code null} 时，抛出 {@link IllegalArgumentException} 异常。</p>
+     */
+    @Test
+    public void should_throws_when_prefix_is_null() {
+        IllegalArgumentException cause = catchThrowableOfType(IllegalArgumentException.class,
+                () -> ParameterizedStringResolver.create(null, SUFFIX, ESCAPE_CHARACTER));
+        assertThat(cause).isNotNull();
+    }
+
+    /**
+     * 目标方法：{@link ParameterizedStringResolver#create(String, String, char)}
+     * <p>当变量后缀为空字符串时，抛出 {@link IllegalArgumentException} 异常。</p>
+     */
+    @Test
+    public void should_throws_when_suffix_is_empty() {
+        IllegalArgumentException cause = catchThrowableOfType(IllegalArgumentException.class,
+                () -> ParameterizedStringResolver.create(PREFIX, StringUtils.EMPTY, ESCAPE_CHARACTER));
+        assertThat(cause).isNotNull();
+    }
+
+    /**
+     * 目标方法：{@link ParameterizedStringResolver#create(String, String, char)}
+     * <p>当变量前缀包含转义字符时，抛出 {@link IllegalArgumentException} 异常。</p>
+     */
+    @Test
+    public void should_throws_when_prefix_contains_escape_character() {
+        IllegalArgumentException cause = catchThrowableOfType(IllegalArgumentException.class,
+                () -> ParameterizedStringResolver.create(ILLEGAL_PREFIX, SUFFIX, ESCAPE_CHARACTER));
+        assertThat(cause).isNotNull();
+    }
+
+    /**
+     * 目标方法：{@link ParameterizedStringResolver#create(String, String, char)}
+     * <p>当变量后缀包含转义字符时，抛出 {@link IllegalArgumentException} 异常。</p>
+     */
+    @Test
+    public void should_throws_when_suffix_contains_escape_character() {
+        IllegalArgumentException cause = catchThrowableOfType(IllegalArgumentException.class,
+                () -> ParameterizedStringResolver.create(PREFIX, ILLEGAL_SUFFIX, ESCAPE_CHARACTER));
+        assertThat(cause).isNotNull();
+    }
+
+    /**
+     * 目标方法：{@link ParameterizedStringResolver#resolve(String)}
+     * <p>当参数未关闭时，引发 {@link StringFormatException} 异常。</p>
+     */
+    @Test
+    public void should_throws_when_parameter_incomplete() {
+        final String originalString = "Parameterized string. ${parameter";
+        IllegalArgumentException cause =
+                catchThrowableOfType(StringFormatException.class, () -> getParameterizedString(originalString));
+        assertThat(cause).isNotNull();
+    }
+
+    /**
+     * 目标方法：{@link ParameterizedStringResolver#resolve(String)}
+     * <p>当发现未转义的参数后缀时，引发 {@link StringFormatException} 异常。</p>
+     */
+    @Test
+    public void should_throws_when_parameter_not_started() {
+        final String originalString = "Parameterized string. parameter}";
+        IllegalArgumentException cause =
+                catchThrowableOfType(StringFormatException.class, () -> getParameterizedString(originalString));
+        assertThat(cause).isNotNull();
+    }
+
+    /**
+     * 目标方法：{@link ParameterizedStringResolver#resolve(String)}
+     * <p>当以单独的转义字符结尾时，引发 {@link StringFormatException} 异常。</p>
+     */
+    @Test
+    public void should_throws_when_end_with_escape_character() {
+        final String originalString = "Parameterized string. parameter/";
+        IllegalArgumentException cause =
+                catchThrowableOfType(StringFormatException.class, () -> getParameterizedString(originalString));
+        assertThat(cause).isNotNull();
+    }
+
+    /**
+     * 目标方法：{@link ParameterizedString#format(Map)}
+     * <p>当所需参数未提供时，引发 {@link StringFormatException} 异常。</p>
+     */
+    @Test
+    public void should_throws_when_required_parameter_not_supplied() {
+        final String originalString = "${required-parameter}";
+        ParameterizedString parameterizedString = getParameterizedString(originalString);
+        IllegalArgumentException cause =
+                catchThrowableOfType(StringFormatException.class, () -> parameterizedString.format(null));
+        assertThat(cause).isNotNull();
+    }
+
+    /**
+     * 目标方法：{@link ParameterizedStringResolver#resolve(String)}
+     * <p>当递归包含参数时，引发 {@link StringFormatException} 异常。</p>
+     */
+    @Test
+    public void should_throws_when_parameter_contained_recursively() {
+        final String originalString = "${parameter${recursive-parameter}}";
+        IllegalArgumentException cause =
+                catchThrowableOfType(StringFormatException.class, () -> getParameterizedString(originalString));
+        assertThat(cause).isNotNull();
+    }
+
+    /**
+     * 目标方法：{@link ParameterizedString#format(Map)}
+     * <p>正确解析带有转义符的文本。</p>
+     *
+     * @throws IOException 读取资源文件发生IO异常。
+     */
+    @Test
+    public void should_return_formatted_xml() throws IOException {
+        String parameterizedString = IoUtils.content(ParameterizedStringResolverTest.class, "/ParameterizedString.xml");
+        Map<String, String> params =
+                MapBuilder.<String, String>get().put("namespace", "my-namespace").put("resultMap", "my-result").build();
+        parameterizedString = parameterizedString.replace("/", "//");
+        ParameterizedString format = getParameterizedString(parameterizedString);
+        String result = format.format(params);
+        assertThat(result).isNotNull()
+                .isEqualTo(IoUtils.content(ParameterizedStringResolverTest.class, "/ParameterizedStringResult.xml"));
+    }
+
+    @Nested
+    @DisplayName("验证方法：format(Map<?, ?> args)")
+    class TestFormat {
+        @Nested
+        @DisplayName("异常场景")
+        class GivenExceptionScenario {
+            @Test
+            @DisplayName("当参数中不包含格式化字符串所需要的变量时，抛出 StringFormatException")
+            void givenArgsNotContainsRequiredVariableThenThrowStringFormatException() {
+                ParameterizedString format = getParameterizedString("${required}");
+                StringFormatException exception = catchThrowableOfType(StringFormatException.class,
+                        () -> format.format(MapBuilder.get().put("someOther", "value").build()));
+                assertThat(exception).isNotNull().hasMessage("Parameter 'required' required but not supplied.");
+            }
+        }
+    }
+
+    @Nested
+    @DisplayName("验证方法：toString()")
+    class TestToString {
+        @Test
+        @DisplayName("当格式化字符串符合要求时，输出正确的字符串")
+        void returnCorrectString() {
+            ParameterizedString format = getParameterizedString("${required}");
+            String actual = format.format(MapBuilder.get().put("required", "value").build());
+            assertThat(actual).isEqualTo("value");
+            assertThat(format.toString()).isEqualTo(
+                    "[originalString=${required}, variables=[[position=0, variable=required]]]");
+        }
+    }
+
+    @Test
+    @DisplayName("当字符串包含${}{}时，输出正确的字符串")
+    void shouldOkWhenSpaceHolderWithBrackets() {
+        ParameterizedStringResolver resolver =
+                ParameterizedStringResolver.create(PREFIX, SUFFIX, EMPTY_ESCAPE_CHARACTER, false);
+        String input = """
+                a:
+                  c: '{"2" : "3"}'
+                  d: '${hello} : ${bye} : {ok}'
+                  n: ${hello}
+                  x: '{"name":"bob"}'
+                  y: '{"1" : 2, "2" : ${hello}}'""";
+        Map<String, String> params =
+                MapBuilder.<String, String>get().put("hi", "嗨").put("hello", "你好").put("bye", "再见").build();
+        ParameterizedString parameterizedString = resolver.resolve(input);
+        String actual = parameterizedString.format(params);
+        String except = """
+                a:
+                  c: '{"2" : "3"}'
+                  d: '你好 : 再见 : {ok}'
+                  n: 你好
+                  x: '{"name":"bob"}'
+                  y: '{"1" : 2, "2" : 你好}'""";
+        assertThat(actual).isEqualTo(except);
+    }
+}

@@ -1,0 +1,7 @@
+default-expire-time: 30
+
+fit:
+  beans:
+    packages:
+    - 'org.fitframework.heartbeat.server'
+    - 'org.fitframework.service'

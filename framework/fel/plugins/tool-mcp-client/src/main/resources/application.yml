@@ -1,0 +1,9 @@
+fit:
+  beans:
+    packages:
+    - 'org.fitframework.fel.tool.mcp.client.support'
+
+mcp:
+  client:
+    request:
+      timeout-seconds: 300

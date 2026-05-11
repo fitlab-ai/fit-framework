@@ -1,0 +1,77 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.flowable.publisher;
+
+import static org.fitframework.inspection.Validation.greaterThan;
+import static org.fitframework.inspection.Validation.notNull;
+
+import org.fitframework.flowable.Publisher;
+import org.fitframework.flowable.Subscriber;
+import org.fitframework.flowable.Subscription;
+import org.fitframework.flowable.operation.AbstractOperation;
+import org.fitframework.flowable.util.counter.Counter;
+import org.fitframework.inspection.Nonnull;
+
+/**
+ * 表示 {@link Publisher} 的从开始跳过指定个数元素的过滤的实现。
+ *
+ * @param <T> 表示发布者中待过滤数据的类型的 {@link T}。
+ * @author 鲁为
+ * @since 2024-03-07
+ */
+public class SkipPublisherDecorator<T> implements Publisher<T> {
+    private final Publisher<T> decorated;
+    private final int count;
+
+    /**
+     * 使用指定的发布者和跳过数量初始化 {@link SkipPublisherDecorator} 的新实例。
+     *
+     * @param decorated 表示被装饰的发布者的 {@link Publisher}{@code <}{@link T}{@code >}。
+     * @param count 表示跳过数量的 {@code int}。
+     * @throws IllegalArgumentException 当 {@code decorated} 为 {@code null} 或 {@code count} 小于 0 时。
+     */
+    public SkipPublisherDecorator(Publisher<T> decorated, int count) {
+        this.decorated = notNull(decorated, "The decorated count publisher cannot be null.");
+        this.count = greaterThan(count, 0, "The count to skip must be positive. [count={0}]", count);
+    }
+
+    @Override
+    public void subscribe(Subscriber<T> subscriber) {
+        this.decorated.subscribe(new SkipOperation<>(subscriber, this.count));
+    }
+
+    private static class SkipOperation<T> extends AbstractOperation<T, T> {
+        private final Counter skipConsumeCount;
+
+        SkipOperation(Subscriber<T> subscriber, int count) {
+            super(subscriber);
+            this.skipConsumeCount = Counter.create(count);
+        }
+
+        @Override
+        protected void onSubscribed0(@Nonnull Subscription subscription) {
+            long skipCount = this.skipConsumeCount.getValue();
+            super.onSubscribed0(subscription);
+            if (skipCount > 0) {
+                super.request0(skipCount);
+            }
+        }
+
+        @Override
+        protected void consume0(Subscription subscription, T data) {
+            if (hasSkipped() || !skip()) {
+                this.getNextSubscriber().consume(data);
+            }
+        }
+
+        private boolean hasSkipped() {
+            return this.skipConsumeCount.getValue() == 0;
+        }
+
+        private boolean skip() {
+            return this.skipConsumeCount.decrease() == 1;
+        }
+    }
+}

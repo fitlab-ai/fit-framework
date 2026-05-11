@@ -1,0 +1,170 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.fel.maven.complie.parser;
+
+import com.fasterxml.jackson.databind.JsonNode;
+
+import org.fitframework.fel.tool.annotation.ToolMethod;
+import org.fitframework.fel.tool.info.entity.ParameterEntity;
+import org.fitframework.fel.tool.info.entity.PropertyEntity;
+import org.fitframework.fel.tool.info.entity.ReturnPropertyEntity;
+import org.fitframework.fel.tool.info.entity.SchemaEntity;
+import org.fitframework.annotation.Property;
+import org.fitframework.annotation.util.PropertyHelper;
+import org.fitframework.util.StringUtils;
+
+import net.bytebuddy.description.annotation.AnnotationDescription;
+import net.bytebuddy.description.method.MethodDescription;
+import net.bytebuddy.description.method.ParameterDescription;
+
+import static org.fitframework.inspection.Validation.notNull;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+
+/**
+ * 提供对摘要信息的解析。
+ *
+ * @author 曹嘉美
+ * @author 杭潇
+ * @since 2024-10-28
+ */
+public class ByteBuddySchemaParser {
+    private static final String SCHEMA_TYPE = "object";
+
+    /**
+     * 解析方法信息。
+     *
+     * @param methodDescription 表示解析方法描述的 {@link MethodDescription}。
+     * @return 表示描述信息实体的 {@link SchemaEntity}。
+     */
+    public static Optional<SchemaEntity> parseMethodSchema(MethodDescription methodDescription) {
+        AnnotationDescription.Loadable<ToolMethod> toolAnnotation =
+                methodDescription.getDeclaredAnnotations().ofType(ToolMethod.class);
+        if (toolAnnotation == null) {
+            return Optional.empty();
+        }
+        ToolMethod toolMethod = toolAnnotation.load();
+        SchemaEntity schemaEntity = new SchemaEntity();
+        schemaEntity.setName(toolMethod.name());
+        schemaEntity.setDescription(toolMethod.description());
+        schemaEntity.setParameters(parseParameter(methodDescription));
+        schemaEntity.setOrder(new LinkedList<>(schemaEntity.getParameters().getProperties().keySet()));
+        schemaEntity.setRet(getStringObjectMap(parseReturnProperty(methodDescription)));
+        List<String> extraParams = Arrays.asList(toolMethod.extraParams());
+        if (!extraParams.isEmpty()) {
+            Map<String, Object> parameterExtensions = new LinkedHashMap<>();
+            parameterExtensions.put("config", Arrays.asList(toolMethod.extraParams()));
+            schemaEntity.setParameterExtensions(parameterExtensions);
+        }
+        return Optional.of(schemaEntity);
+    }
+
+    private static Map<String, Object> getStringObjectMap(ReturnPropertyEntity returnPropertyEntity) {
+        Map<String, Object> returnProperty = new LinkedHashMap<>();
+        returnProperty.put("name", returnPropertyEntity.getName());
+        returnProperty.put("description", returnPropertyEntity.getDescription());
+        returnProperty.put("type", returnPropertyEntity.getType());
+        returnProperty.put("items", returnPropertyEntity.getItems());
+        returnProperty.put("properties", returnPropertyEntity.getProperties());
+        if (returnPropertyEntity.getConvertor() != null) {
+            returnProperty.put("convertor", returnPropertyEntity.getConvertor());
+        }
+        if (returnPropertyEntity.getExamples() != null) {
+            returnProperty.put("examples", returnPropertyEntity.getExamples());
+        }
+        return returnProperty;
+    }
+
+    private static ParameterEntity parseParameter(MethodDescription methodDescription) {
+        ParameterEntity parameterEntity = new ParameterEntity();
+        parameterEntity.setType(SCHEMA_TYPE);
+        Map<String, Object> properties = new LinkedHashMap<>();
+        List<String> required = new LinkedList<>();
+        for (ParameterDescription parameterDescription : methodDescription.getParameters()) {
+            String methodName = parameterDescription.getName();
+            PropertyEntity property = parseProperty(parameterDescription);
+            properties.put(methodName, property);
+            if (property.isNeed()) {
+                required.add(methodName);
+            }
+        }
+        parameterEntity.setProperties(properties);
+        parameterEntity.setRequired(required);
+        return parameterEntity;
+    }
+
+    private static PropertyEntity parseProperty(ParameterDescription parameterDescription) {
+        JsonNode jsonNode = notNull(JacksonTypeParser.getParameterSchema(parameterDescription.getType()),
+                "The parameter type cannot be null.");
+        PropertyEntity entity = new PropertyEntity();
+        setPropertyType(entity, jsonNode);
+        entity.setName(parameterDescription.getName());
+        AnnotationDescription.Loadable<Property> paramAnnotation =
+                parameterDescription.getDeclaredAnnotations().ofType(Property.class);
+        if (paramAnnotation != null) {
+            Property property = paramAnnotation.load();
+            entity.setDescription(property.description());
+            entity.setNeed(property.required());
+            String defaultValue = property.defaultValue();
+            if (defaultValue != null && PropertyHelper.isCustomValue(defaultValue)) {
+                entity.setDefaultValue(defaultValue);
+            }
+            String example = property.example();
+            if (StringUtils.isNotEmpty(example)) {
+                entity.setExamples(Collections.singletonList(example));
+            }
+        }
+        return entity;
+    }
+
+    private static ReturnPropertyEntity parseReturnProperty(MethodDescription methodDescription) {
+        ReturnPropertyEntity returnPropertyEntity = new ReturnPropertyEntity();
+        AnnotationDescription.Loadable<Property> returnAnnotation =
+                methodDescription.getDeclaredAnnotations().ofType(Property.class);
+        if (returnAnnotation != null) {
+            Property property = returnAnnotation.load();
+            returnPropertyEntity.setName(property.name());
+            returnPropertyEntity.setDescription(property.description());
+            String example = property.example();
+            if (StringUtils.isNotEmpty(example)) {
+                returnPropertyEntity.setExamples(Collections.singletonList(example));
+            }
+        }
+        notNull(methodDescription.getReturnType(), "The return type cannot be null.");
+        JsonNode jsonNode = JacksonTypeParser.getParameterSchema(methodDescription.getReturnType());
+        setPropertyType(returnPropertyEntity, jsonNode);
+        AnnotationDescription.Loadable<ToolMethod> toolMethodAnnotation =
+                methodDescription.getDeclaredAnnotations().ofType(ToolMethod.class);
+        if (toolMethodAnnotation != null) {
+            returnPropertyEntity.setConvertor(toolMethodAnnotation.load().returnConverter());
+        }
+        return returnPropertyEntity;
+    }
+
+    private static void setPropertyType(PropertyEntity returnPropertyEntity, JsonNode jsonNode) {
+        returnPropertyEntity.setType(jsonNode.get("type").asText());
+        if (Objects.equals(returnPropertyEntity.getType(), "array")) {
+            returnPropertyEntity.setItems(jsonNode.get("items"));
+        }
+        if (Objects.equals(returnPropertyEntity.getType(), "object")) {
+            if (jsonNode.get("properties") != null) {
+                returnPropertyEntity.setProperties(jsonNode.get("properties"));
+                // 为对象类型添加required数组，包含所有属性名
+                List<String> requiredFields = new LinkedList<>();
+                jsonNode.get("properties").fieldNames().forEachRemaining(requiredFields::add);
+                returnPropertyEntity.setRequired(requiredFields);
+            } else {
+                returnPropertyEntity.setProperties(new LinkedHashMap<>());
+            }
+        }
+    }
+}

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.fitframework.plugin</groupId>
+        <artifactId>fit-plugin-parent</artifactId>
+        <version>3.7.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>fit-security-simple</artifactId>
+
+    <name>FIT Security Simple</name>
+    <description>FIT Framework Security Simple Plugin module provides built-in simple implementation of security
+        service, which does not actually handle security issues and is only used for testing.
+    </description>
+    <url>https://github.com/fitlab-ai/fit-framework</url>
+
+    <dependencies>
+        <!-- FIT core -->
+        <dependency>
+            <groupId>org.fitframework</groupId>
+            <artifactId>fit-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.fitframework</groupId>
+            <artifactId>fit-util</artifactId>
+        </dependency>
+
+        <!-- Services -->
+        <dependency>
+            <groupId>org.fitframework.service</groupId>
+            <artifactId>fit-security</artifactId>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <configuration>
+                            <target>
+                                <copy file="${project.build.directory}/${project.build.finalName}.jar"
+                                      todir="../../../../../../build/plugins"/>
+                            </target>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

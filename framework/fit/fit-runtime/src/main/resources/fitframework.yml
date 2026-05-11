@@ -1,0 +1,106 @@
+application:
+  name: "application" # 默认应用名
+
+worker:
+  id: "default-worker-id" # 默认的进程唯一标识，该配置需要进行覆盖，避免workerId相同注册服务混乱
+  host: "localhost" # 该配置需要修改为真实启动的本地ip地址
+  environment: "local" # 默认环境标
+  environment-sequence: "local" # 默认环境调用链
+  exit:
+    graceful: true
+
+matata:
+  registry:
+    host: 'localhost' # 默认连接的注册中心为本地
+    port: 8080 # 默认连接注册中心的端口为本地默认的 8080 端口
+    protocol: 2 # 注册中心默认使用 Http 的传输协议
+    mode: 'DIRECT' # 默认连接注册中心的模式为直连模式(内存版注册中心)
+    environment: "local" # 默认注册中心的环境标和本地默认配置一致
+    available-services: # 将注册中心和获取地址相关的服务进行配置，其他服务都可以通过以下服务进行地址获取
+      # 订阅服务并获取所订阅服务地址的接口
+      - genericable-name: "org.fitframework.registry.RegistryService.subscribeFitables"
+        genericable-id: "org.fitframework.registry.registry-service.subscribe-fitables"
+        genericable-version: "1.0.0"
+        fitable-id: "subscribe-fitables"
+        fitable-version: "1.0.0"
+        formats:
+          - 1
+      # 直接获取服务地址的接口
+      - genericable-name: "org.fitframework.registry.RegistryService.queryFitablesAddresses"
+        genericable-id: "org.fitframework.registry.registry-service.query-fitables-addresses"
+        genericable-version: "1.0.0"
+        fitable-id: "query-fitables-addresses"
+        fitable-version: "1.0.0"
+        formats:
+          - 1
+      # 查询注册中心正在运行的服务实现信息的接口
+      - genericable-name: "org.fitframework.registry.RegistryService.queryRunningFitables"
+        genericable-id: "org.fitframework.registry.registry-service.query-running-fitables"
+        genericable-version: "1.0.0"
+        fitable-id: "query-running-fitables"
+        fitable-version: "1.0.0"
+        formats:
+          - 1
+      # 向注册中心申请令牌的接口
+      - genericable-name: "org.fitframework.registry.TokenService.applyToken"
+        genericable-id: "matata.registry.secure-access.apply-token"
+        genericable-version: "1.0.0"
+        fitable-id: "apply-token"
+        fitable-version: "1.0.0"
+        formats:
+          - 1
+      # 向注册中心刷新令牌的接口
+      - genericable-name: "org.fitframework.registry.TokenService.refreshToken"
+        genericable-id: "matata.registry.secure-access.refresh-token"
+        genericable-version: "1.0.0"
+        fitable-id: "refresh-token-for-registry-server"
+        fitable-version: "1.0.0"
+        formats:
+          - 1
+      # 向注册中心发送心跳
+      - genericable-name: "org.fitframework.heartbeat.sendHeartbeat"
+        genericable-id: "org.fitframework.heartbeat.send-heartbeat"
+        genericable-version: "1.0.0"
+        fitable-id: "send-heartbeat"
+        fitable-version: "1.0.0"
+        formats:
+          - 1
+      # 向注册中心注册服务信息
+      - genericable-name: "org.fitframework.registry.RegistryService.registerFitables"
+        genericable-id: "org.fitframework.registry.registry-service.register-fitables"
+        genericable-version: "1.0.0"
+        fitable-id: "register-fitables"
+        fitable-version: "1.0.0"
+        formats:
+          - 1
+    auth-required-services: # 将注册中心和心跳相关的服务进行配置，表示其需要认证鉴权
+      # 订阅服务并获取所订阅服务地址的接口
+      - genericable-name: "org.fitframework.registry.RegistryService.subscribeFitables"
+        genericable-id: "org.fitframework.registry.registry-service.subscribe-fitables"
+      # 直接获取服务地址的接口
+      - genericable-name: "org.fitframework.registry.RegistryService.queryFitablesAddresses"
+        genericable-id: "org.fitframework.registry.registry-service.query-fitables-addresses"
+      # 查询注册中心正在运行的服务实现信息的接口
+      - genericable-name: "org.fitframework.registry.RegistryService.queryRunningFitables"
+        genericable-id: "org.fitframework.registry.registry-service.query-running-fitables"
+      # 向注册中心服务端注册服务实现列表
+      - genericable-name: "org.fitframework.registry.RegistryService.registerFitables"
+        genericable-id: "org.fitframework.registry.registry-service.register-fitables"
+      # 向注册中心服务端取消注册服务实现列表
+      - genericable-name: "org.fitframework.registry.RegistryService.unregisterFitables"
+        genericable-id: "org.fitframework.registry.registry-service.unregister-fitables"
+      # 向注册中心服务端取消订阅指定服务实现的实例信息
+      - genericable-name: "org.fitframework.registry.RegistryService.unsubscribeFitables"
+        genericable-id: "org.fitframework.registry.registry-service.unsubscribe-fitables"
+      # 发送心跳信息
+      - genericable-name: "org.fitframework.heartbeat.sendHeartbeat"
+        genericable-id: "org.fitframework.heartbeat.send-heartbeat"
+      # 发送停止心跳信息
+      - genericable-name: "org.fitframework.heartbeat.stopHeartbeat"
+        genericable-id: "org.fitframework.heartbeat.stop-heartbeat"
+
+fit:
+  beans:
+    packages:
+      - "org.fitframework"
+      - "org.fitframework"

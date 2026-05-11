@@ -1,0 +1,52 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.plugin.maven.support;
+
+import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.logging.Log;
+import org.apache.maven.project.MavenProject;
+
+import java.io.File;
+import java.util.List;
+
+/**
+ * 表示编译程序的抽象父类。
+ *
+ * @author 季聿阶
+ * @since 2023-07-23
+ */
+public abstract class AbstractCompiler extends AbstractExecutor {
+    /**
+     * 使用指定的项目、日志和共享依赖初始化 {@link AbstractCompiler} 的新实例。
+     *
+     * @param project 表示项目的 {@link MavenProject}。
+     * @param log 表示日志的 {@link Log}。
+     * @param sharedDependencies 表示共享依赖的 {@link List}{@code <}{@link SharedDependency}{@code >}。
+     */
+    public AbstractCompiler(MavenProject project, Log log, List<SharedDependency> sharedDependencies) {
+        super(project, log, sharedDependencies);
+    }
+
+    /**
+     * 对当前项目进行编译。
+     *
+     * @throws MojoExecutionException 当编译过程中出现异常时。
+     */
+    public void compile() throws MojoExecutionException {
+        String outputDirectory = this.project().getBuild().getOutputDirectory();
+        String root = outputDirectory + File.separator + FIT_ROOT_DIRECTORY;
+        ensureDirectory(root);
+        this.output(outputDirectory, root);
+    }
+
+    /**
+     * 向目标文件夹下输出编译产物。
+     *
+     * @param outputDirectory 表示原始编译的输出目录名字的 {@link String}。
+     * @param fitRootDirectory 表示 FIT 输出目标文件夹名字的 {@link String}。
+     * @throws MojoExecutionException 当编译过程中出现异常时。
+     */
+    protected abstract void output(String outputDirectory, String fitRootDirectory) throws MojoExecutionException;
+}

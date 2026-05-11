@@ -1,0 +1,34 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.fel.tool.info.entity;
+
+/**
+ * 表示定义的实体类，用于存储定义信息。
+ *
+ * @author 曹嘉美
+ * @author 李金绪
+ * @since 2024-10-26
+ */
+public class DefinitionEntity {
+    private SchemaEntity schema;
+
+    /**
+     * 获取 schema 对象。
+     *
+     * @return 表示 schema 对象的 {@link SchemaEntity}。
+     */
+    public SchemaEntity getSchema() {
+        return this.schema;
+    }
+
+    /**
+     * 设置 schema 对象。
+     *
+     * @param schema 表示 schema 对象的 {@link SchemaEntity}。
+     */
+    public void setSchema(SchemaEntity schema) {
+        this.schema = schema;
+    }
+}

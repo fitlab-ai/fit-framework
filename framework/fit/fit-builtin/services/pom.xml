@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.fitframework</groupId>
+        <artifactId>fit-builtin-parent</artifactId>
+        <version>3.7.0-SNAPSHOT</version>
+    </parent>
+
+    <groupId>org.fitframework.service</groupId>
+    <artifactId>fit-service-parent</artifactId>
+    <packaging>pom</packaging>
+
+    <name>FIT Service Parent</name>
+    <description>FIT Framework Service module provides built-in system services.</description>
+    <url>https://github.com/fitlab-ai/fit-framework</url>
+
+    <modules>
+        <module>fit-client</module>
+        <module>fit-heartbeat</module>
+        <module>fit-http-classic</module>
+        <module>fit-http-protocol</module>
+        <module>fit-message-serializer</module>
+        <module>fit-security</module>
+        <module>fit-server</module>
+        <module>fit-service</module>
+    </modules>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.fitframework</groupId>
+                <artifactId>fit-build-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>build-service</id>
+                        <goals>
+                            <goal>build-service</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.fitframework</groupId>
+                <artifactId>fit-dependency-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Created-By>FIT Lab</Created-By>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -1,0 +1,48 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.waterflow.domain.stream.callbacks;
+
+import org.fitframework.waterflow.domain.stream.reactive.Callback;
+
+import java.util.List;
+
+/**
+ * ToCallback表示对 {@link Callback} 的实现类
+ *
+ * @author 李哲峰
+ * @since 1.0
+ */
+public class ToCallback<O> implements Callback<O> {
+    private final List<O> products;
+
+    /**
+     * 构造方法
+     *
+     * @param products 待回调发送的数据
+     */
+    public ToCallback(List<O> products) {
+        this.products = products;
+    }
+
+    /**
+     * 获取所有待回调发送的数据
+     *
+     * @return list类型的数据
+     */
+    @Override
+    public List<O> getAll() {
+        return this.products;
+    }
+
+    /**
+     * get
+     *
+     * @return O
+     */
+    @Override
+    public O get() {
+        return this.products.get(0);
+    }
+}

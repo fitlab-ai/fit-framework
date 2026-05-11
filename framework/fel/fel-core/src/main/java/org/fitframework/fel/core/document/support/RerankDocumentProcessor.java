@@ -1,0 +1,50 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.fel.core.document.support;
+
+import org.fitframework.fel.core.document.DocumentPostProcessor;
+import org.fitframework.fel.core.document.MeasurableDocument;
+import org.fitframework.fel.core.rerank.RerankModel;
+import org.fitframework.fel.core.rerank.RerankOption;
+import org.fitframework.inspection.Validation;
+import org.fitframework.util.CollectionUtils;
+
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * 表示检索文档的后置重排序接口。
+ *
+ * @author 马朝阳
+ * @since 2024-09-14
+ */
+public class RerankDocumentProcessor implements DocumentPostProcessor {
+    private final RerankOption rerankOption;
+    private final RerankModel rerankModel;
+
+    /**
+     * 创建 {@link RerankDocumentProcessor} 的实体。
+     *
+     * @param rerankOption 表示重排模型参数的 {@link RerankOption}。
+     * @param rerankModel 表示重排模型接口的 {@link RerankModel}。
+     */
+    public RerankDocumentProcessor(RerankOption rerankOption, RerankModel rerankModel) {
+        this.rerankOption = Validation.notNull(rerankOption, "The rerank option cannot be null.");
+        this.rerankModel = Validation.notNull(rerankModel, "The rerank model cannot be null.");
+    }
+
+    /**
+     * 对检索结果进行重排序。
+     *
+     * @param documents 表示输入文档的 {@link List}{@code <}{@link MeasurableDocument}{@code >}。
+     * @return 表示处理后文档的 {@link List}{@code <}{@link MeasurableDocument}{@code >}。
+     */
+    public List<MeasurableDocument> process(List<MeasurableDocument> documents) {
+        if (CollectionUtils.isEmpty(documents)) {
+            return Collections.emptyList();
+        }
+        return rerankModel.generate(documents, rerankOption);
+    }
+}

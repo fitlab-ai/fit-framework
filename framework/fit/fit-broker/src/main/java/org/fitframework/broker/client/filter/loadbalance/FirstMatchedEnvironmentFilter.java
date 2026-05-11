@@ -1,0 +1,55 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.broker.client.filter.loadbalance;
+
+import org.fitframework.broker.FitableMetadata;
+import org.fitframework.broker.Target;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+/**
+ * 最先满足的环境标调用链的负载均衡策略。
+ * <p>该负载均衡策略具体的策略为：</p>
+ * <ol>
+ *     <li>指定环境标调用链。</li>
+ *     <li>依次遍历环境标调用链中的所有环境标，如果待过滤地址中存在满足环境的地址，则直接返回（短路）。</li>
+ *     <li>如果环境标调用链中没有环境标被满足，则返回空地址列表。</li>
+ * </ol>
+ *
+ * @author 季聿阶
+ * @since 2022-06-06
+ */
+public class FirstMatchedEnvironmentFilter extends AbstractFilter {
+    private final List<String> environmentPrioritySequence;
+
+    /**
+     * 使用指定的环境优先级序列初始化 {@link FirstMatchedEnvironmentFilter} 的新实例。
+     *
+     * @param environmentPrioritySequence 表示环境优先级序列的 {@link List}{@code <}{@link String}{@code >}。
+     */
+    public FirstMatchedEnvironmentFilter(List<String> environmentPrioritySequence) {
+        this.environmentPrioritySequence = environmentPrioritySequence;
+    }
+
+    @Override
+    protected List<Target> loadbalance(FitableMetadata fitable, String localWorkerId, List<Target> toFilterTargets,
+            Map<String, Object> extensions) {
+        Optional<String> first = this.environmentPrioritySequence.stream()
+                .filter(environment -> this.containEnvironment(toFilterTargets, environment))
+                .findFirst();
+        if (first.isPresent()) {
+            return new EnvironmentFilter(first.get()).filter(fitable, localWorkerId, toFilterTargets, extensions);
+        }
+        return Collections.emptyList();
+    }
+
+    private boolean containEnvironment(List<Target> targets, String environment) {
+        return targets.stream().map(Target::environment).collect(Collectors.toList()).contains(environment);
+    }
+}

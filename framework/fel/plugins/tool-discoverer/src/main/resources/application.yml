@@ -1,0 +1,6 @@
+fit:
+  beans:
+    packages:
+    - 'org.fitframework.fel.tool.support'
+tool:
+  max-num: 64

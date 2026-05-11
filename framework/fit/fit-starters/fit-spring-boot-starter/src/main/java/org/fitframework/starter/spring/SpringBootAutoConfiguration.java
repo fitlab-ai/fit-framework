@@ -1,0 +1,65 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.starter.spring;
+
+import org.fitframework.broker.client.BrokerClient;
+import org.fitframework.ioc.BeanFactory;
+import org.fitframework.protocol.jar.JarLocationParser;
+import org.fitframework.runtime.FitRuntime;
+import org.fitframework.runtime.FitStarter;
+
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * 表示 Spring-Boot Starter 中的自动配置类。
+ *
+ * @author 季聿阶
+ * @since 2024-03-25
+ */
+@Configuration
+@EnableConfigurationProperties(PluginProperties.class)
+@ComponentScan(basePackages = "org.fitframework.starter.spring")
+public class SpringBootAutoConfiguration {
+    private final ApplicationArguments args;
+
+    /**
+     * 通过应用的启动参数来初始化 {@link SpringBootAutoConfiguration} 的新实例。
+     *
+     * @param args 表示应用的启动参数的 {@link ApplicationArguments}。
+     */
+    public SpringBootAutoConfiguration(ApplicationArguments args) {
+        this.args = args;
+    }
+
+    /**
+     * 将 FIT 运行时注册到 Spring 容器中。
+     *
+     * @return 表示 FIT 运行时的 {@link FitRuntime}。
+     */
+    @Bean
+    public FitRuntime fitRuntime() {
+        JarLocationParser.register(SpringJarLocationParser.INSTANCE);
+        return FitStarter.start(SpringBootAutoConfiguration.class, this.args.getSourceArgs());
+    }
+
+    /**
+     * 将 FIT 调用代理客户端注册到 Spring 容器中。
+     *
+     * @param fitRuntime 表示依赖的 FIT 运行时的 {@link FitRuntime}。
+     * @return 表示 FIT 调用代理客户端的 {@link BrokerClient}。
+     */
+    @Bean
+    public BrokerClient brokerClient(FitRuntime fitRuntime) {
+        return fitRuntime.root()
+                .container()
+                .factory(BrokerClient.class)
+                .map(BeanFactory::<BrokerClient>get)
+                .orElseThrow(() -> new IllegalStateException("No broker client in FIT runtime."));
+    }
+}

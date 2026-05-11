@@ -1,0 +1,128 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.broker.client.filter.loadbalance;
+
+import static org.fitframework.inspection.Validation.notNull;
+
+import org.fitframework.client.Client;
+import org.fitframework.broker.Endpoint;
+import org.fitframework.broker.FitableMetadata;
+import org.fitframework.broker.Format;
+import org.fitframework.broker.SerializationService;
+import org.fitframework.broker.Target;
+import org.fitframework.conf.runtime.CommunicationProtocol;
+import org.fitframework.conf.runtime.SerializationFormat;
+import org.fitframework.log.Logger;
+import org.fitframework.util.CollectionUtils;
+import org.fitframework.util.ObjectUtils;
+import org.fitframework.util.StringUtils;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+/**
+ * 通信协议及序列化方式支持的负载均衡策略。
+ *
+ * @author 季聿阶
+ * @since 2022-06-06
+ */
+public class ProtocolAndFormatSupportedFilter extends AbstractFilter {
+    private static final Logger log = Logger.get(ProtocolAndFormatSupportedFilter.class);
+
+    private final List<Client> clients;
+    private final SerializationService serializationService;
+    private final CommunicationProtocol specifiedProtocol;
+    private final SerializationFormat specifiedFormat;
+
+    /**
+     * 使用指定的客户端列表、序列化服务、指定协议和序列化方式初始化 {@link ProtocolAndFormatSupportedFilter} 的新实例。
+     *
+     * @param clients 表示客户端列表的 {@link List}{@code <}{@link Client}{@code >}。
+     * @param serializationService 表示序列化服务的 {@link SerializationService}。
+     * @param specifiedProtocol 表示指定协议的 {@link CommunicationProtocol}。
+     * @param specifiedFormat 表示指定序列化方式的 {@link SerializationFormat}。
+     * @throws IllegalArgumentException 当 {@code clients} 或 {@code serializationService} 为 {@code null} 时。
+     */
+    public ProtocolAndFormatSupportedFilter(List<Client> clients, SerializationService serializationService,
+            CommunicationProtocol specifiedProtocol, SerializationFormat specifiedFormat) {
+        this.clients = notNull(clients, "The clients cannot be null.");
+        this.serializationService = notNull(serializationService, "The serialization service cannot be null.");
+        this.specifiedProtocol = ObjectUtils.nullIf(specifiedProtocol, CommunicationProtocol.UNKNOWN);
+        this.specifiedFormat = ObjectUtils.nullIf(specifiedFormat, SerializationFormat.UNKNOWN);
+    }
+
+    @Override
+    protected List<Target> loadbalance(FitableMetadata fitable, String localWorkerId, List<Target> toFilterTargets,
+            Map<String, Object> extensions) {
+        return toFilterTargets.stream()
+                .map(target -> this.getSupportedTarget(fitable, target, localWorkerId))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    private Target getSupportedTarget(FitableMetadata fitable, Target target, String localWorkerId) {
+        if (this.isLocal(target, localWorkerId)) {
+            return target;
+        }
+        List<Endpoint> endpoints = target.endpoints()
+                .stream()
+                .filter(endpoint -> this.isProtocolSupported(endpoint.protocol()))
+                .filter(endpoint -> this.isProtocolSpecified(endpoint.protocol()))
+                .collect(Collectors.toList());
+        if (CollectionUtils.isEmpty(endpoints)) {
+            log.debug("Target is filtered: no available protocol. [fitable={}, target={}]",
+                    fitable.toUniqueId(),
+                    target);
+            return null;
+        }
+        List<Integer> supportedFormatCodes =
+                this.serializationService.getSupportedFormats(fitable.genericable().method().method());
+        Set<Integer> targetFormatCodes =
+                target.formats().stream().map(Format::code).filter(this::isFormatSpecified).collect(Collectors.toSet());
+        Set<Integer> availableFormatCodes = CollectionUtils.intersectOrdered(supportedFormatCodes, targetFormatCodes);
+        if (availableFormatCodes.isEmpty()) {
+            log.debug("Target is filtered: no available formats. [fitable={}, target={}]",
+                    fitable.toUniqueId(),
+                    target);
+            return null;
+        }
+        List<Format> availableFormats = availableFormatCodes.stream()
+                .map(code -> Format.custom().name(SerializationFormat.from(code).name()).code(code).build())
+                .collect(Collectors.toList());
+        return Target.custom()
+                .workerId(target.workerId())
+                .host(target.host())
+                .environment(target.environment())
+                .formats(availableFormats)
+                .endpoints(endpoints)
+                .extensions(target.extensions())
+                .build();
+    }
+
+    private boolean isLocal(Target target, String localWorkerId) {
+        return Objects.equals(target.workerId(), localWorkerId);
+    }
+
+    private boolean isProtocolSupported(String protocol) {
+        return this.clients.stream().anyMatch(client -> client.getSupportedProtocols().contains(protocol));
+    }
+
+    private boolean isProtocolSpecified(String protocol) {
+        if (this.specifiedProtocol == CommunicationProtocol.UNKNOWN) {
+            return true;
+        }
+        return StringUtils.equalsIgnoreCase(this.specifiedProtocol.name(), protocol);
+    }
+
+    private boolean isFormatSpecified(int formatCode) {
+        if (this.specifiedFormat == SerializationFormat.UNKNOWN) {
+            return true;
+        }
+        return this.specifiedFormat.code() == formatCode;
+    }
+}

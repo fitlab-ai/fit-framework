@@ -1,0 +1,91 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.flowable.publisher;
+
+import static org.fitframework.inspection.Validation.notNull;
+
+import org.fitframework.flowable.Publisher;
+import org.fitframework.flowable.Subscriber;
+import org.fitframework.flowable.Subscription;
+import org.fitframework.flowable.operation.AbstractOperation;
+
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BinaryOperator;
+
+/**
+ * 表示 {@link Publisher} 的携带数据合并的实现。
+ *
+ * @param <T> 表示发布者中数据类型的 {@link T}。
+ * @author 季聿阶
+ * @since 2024-02-11
+ */
+public class ReducePublisherDecorator<T> implements Publisher<T> {
+    private final Publisher<T> decorated;
+    private final BinaryOperator<T> reducer;
+
+    /**
+     * 使用指定的发布者和归约函数初始化 {@link ReducePublisherDecorator} 的新实例。
+     *
+     * @param decorated 表示被装饰的发布者的 {@link Publisher}{@code <}{@link T}{@code >}。
+     * @param reducer 表示归约函数的 {@link BinaryOperator}{@code <}{@link T}{@code >}。
+     * @throws IllegalArgumentException 当 {@code decorated} 或 {@code reducer} 为 {@code null} 时。
+     */
+    public ReducePublisherDecorator(Publisher<T> decorated, BinaryOperator<T> reducer) {
+        this.decorated = notNull(decorated, "The decorated reduce publisher cannot be null.");
+        this.reducer = notNull(reducer, "The reducer cannot be null.");
+    }
+
+    @Override
+    public void subscribe(Subscriber<T> subscriber) {
+        this.decorated.subscribe(new ReduceOperation<>(this.reducer, subscriber));
+    }
+
+    private static class ReduceOperation<T> extends AbstractOperation<T, T> {
+        private final BinaryOperator<T> reducer;
+        private final AtomicBoolean requested = new AtomicBoolean();
+        private final AtomicReference<T> result = new AtomicReference<>();
+
+        /**
+         * 使用数据聚合方法和下游的订阅者来初始化 {@link ReduceOperation}。
+         *
+         * @param reducer 表示数据聚合方法的 {@link BinaryOperator}{@code <}{@link T}{@code >}。
+         * @param subscriber 表示下游的订阅者的 {@link Subscriber}{@code <}{@link T}{@code >}。
+         */
+        ReduceOperation(BinaryOperator<T> reducer, Subscriber<T> subscriber) {
+            super(subscriber);
+            this.reducer = reducer;
+        }
+
+        @Override
+        protected void request0(long count) {
+            if (this.requested.compareAndSet(false, true)) {
+                this.getPreSubscription().request(1);
+            }
+        }
+
+        @Override
+        protected void consume0(Subscription subscription, T data) {
+            if (this.result.get() != null) {
+                try {
+                    T reduced = this.reducer.apply(this.result.get(), data);
+                    this.result.set(reduced);
+                } catch (Exception cause) {
+                    this.getPreSubscription().cancel();
+                    this.getNextSubscriber().fail(cause);
+                }
+            } else {
+                this.result.set(data);
+            }
+            this.getPreSubscription().request(1);
+        }
+
+        @Override
+        protected void complete0(Subscription subscription) {
+            this.getNextSubscriber().consume(this.result.get());
+            super.complete0(subscription);
+        }
+    }
+}

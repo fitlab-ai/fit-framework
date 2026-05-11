@@ -1,0 +1,71 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.aop.interceptor.async;
+
+import static org.fitframework.inspection.Validation.notNull;
+
+import org.fitframework.aop.interceptor.MethodJoinPoint;
+import org.fitframework.aop.interceptor.support.AbstractMethodInterceptor;
+import org.fitframework.exception.ExceptionHandler;
+import org.fitframework.inspection.Nonnull;
+import org.fitframework.inspection.Nullable;
+import org.fitframework.log.Logger;
+import org.fitframework.util.LazyLoader;
+
+import java.util.concurrent.Executor;
+import java.util.function.Supplier;
+
+/**
+ * 表示异步执行的方法拦截器。
+ *
+ * @author 季聿阶
+ * @since 2022-11-11
+ */
+public class AsyncInterceptor extends AbstractMethodInterceptor {
+    private static final Logger log = Logger.get(AsyncInterceptor.class);
+
+    private final LazyLoader<Executor> executorLoader;
+    private final LazyLoader<ExceptionHandler> exceptionHandlerLoader;
+
+    /**
+     * 使用指定的执行器提供者和异常处理器提供者初始化 {@link AsyncInterceptor} 的新实例。
+     *
+     * @param executorSupplier 表示执行器提供者的 {@link Supplier}{@code <}{@link Executor}{@code >}。
+     * @param exceptionHandlerSupplier 表示异常处理器提供者的 {@link Supplier}{@code <}{@link ExceptionHandler}{@code >}。
+     * @throws IllegalArgumentException 当 {@code executorSupplier} 为 {@code null} 时。
+     */
+    public AsyncInterceptor(Supplier<Executor> executorSupplier, Supplier<ExceptionHandler> exceptionHandlerSupplier) {
+        this.executorLoader =
+                new LazyLoader<>(notNull(executorSupplier, "The async executor supplier cannot be null."));
+        this.exceptionHandlerLoader = new LazyLoader<>(exceptionHandlerSupplier);
+    }
+
+    @Nullable
+    @Override
+    public Object intercept(@Nonnull MethodJoinPoint methodJoinPoint) throws Throwable {
+        this.executorLoader.get().execute(() -> this.asyncExecute(methodJoinPoint));
+        return null;
+    }
+
+    private void asyncExecute(MethodJoinPoint methodJoinPoint) {
+        try {
+            methodJoinPoint.proceed();
+        } catch (Throwable e) {
+            ExceptionHandler exceptionHandler = this.exceptionHandlerLoader.get();
+            if (exceptionHandler == null) {
+                log.debug(e.getClass().getName(), e);
+                log.error("Failed to execute asynchronously. [class={}, method={}]",
+                        methodJoinPoint.getProxiedInvocation().getTarget() == null
+                                ? null
+                                : methodJoinPoint.getProxiedInvocation().getTarget().getClass().getName(),
+                        methodJoinPoint.getProxiedInvocation().getMethod().getName());
+            } else {
+                exceptionHandler.handleException(e,
+                        methodJoinPoint.getProxiedInvocation().getMethod(),
+                        methodJoinPoint.getProxiedInvocation().getArguments());
+            }
+        }
+    }
+}

@@ -1,0 +1,34 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.merge.support;
+
+import org.fitframework.merge.ConflictResolverCollection;
+import org.fitframework.merge.Merger;
+import org.fitframework.util.ObjectUtils;
+
+/**
+ * 表示 {@link Merger} 的抽象父类。
+ *
+ * @param <V> 表示待合并的数据类型的 {@link V}。
+ * @author 季聿阶
+ * @since 2022-07-31
+ */
+public abstract class AbstractMerger<V> implements Merger<V> {
+    private final ConflictResolverCollection conflictResolvers;
+
+    /**
+     * 通过冲突处理器的集合来实例化 {@link AbstractMerger}。
+     *
+     * @param conflictResolvers 表示冲突处理器的集合的 {@link ConflictResolverCollection}。
+     */
+    protected AbstractMerger(ConflictResolverCollection conflictResolvers) {
+        this.conflictResolvers = ObjectUtils.getIfNull(conflictResolvers, ConflictResolverCollection::create);
+    }
+
+    @Override
+    public ConflictResolverCollection conflictResolvers() {
+        return this.conflictResolvers;
+    }
+}

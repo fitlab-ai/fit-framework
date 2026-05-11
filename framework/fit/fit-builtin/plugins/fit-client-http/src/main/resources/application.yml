@@ -1,0 +1,8 @@
+secure:
+  ignore-trust: false
+  ignore-hostname: false
+
+fit:
+  beans:
+    packages:
+    - 'org.fitframework.client.http'

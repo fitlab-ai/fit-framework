@@ -1,0 +1,91 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.broker.resolver;
+
+import static org.fitframework.inspection.Validation.notNull;
+
+import org.fitframework.annotation.Fitable;
+import org.fitframework.broker.LocalExecutor;
+import org.fitframework.broker.LocalExecutorRepository;
+import org.fitframework.broker.LocalExecutorResolver;
+import org.fitframework.broker.UniqueFitableId;
+import org.fitframework.broker.support.LocalFitableExecutor;
+import org.fitframework.broker.util.AnnotationUtils;
+import org.fitframework.ioc.BeanContainer;
+import org.fitframework.ioc.BeanMetadata;
+import org.fitframework.ioc.annotation.AnnotationMetadata;
+import org.fitframework.log.Logger;
+import org.fitframework.util.ReflectionUtils;
+import org.fitframework.util.StringUtils;
+
+import java.lang.reflect.Method;
+import java.util.Optional;
+import java.util.function.Supplier;
+import java.util.regex.Pattern;
+
+/**
+ * 为解析 {@link Fitable} 注解所定义的服务实现提供代理解析工具。
+ *
+ * @author 梁济时
+ * @author 季聿阶
+ * @since 2020-09-24
+ */
+public class FitableAnnotationResolver implements LocalExecutorResolver {
+    /**
+     * 该模式仅支持数字、大小写字母以及 '-'、'_'、'*'、'.' 字符且长度在128以内。
+     */
+    private static final Pattern ID_PATTERN = Pattern.compile("^[\\w\\-.*]{1,128}$");
+    private static final Logger LOG = Logger.get(FitableAnnotationResolver.class);
+
+    private final BeanContainer container;
+    private final LocalExecutorRepository.Registry registry;
+
+    /**
+     * 使用指定的容器和注册表初始化 {@link FitableAnnotationResolver} 的新实例。
+     *
+     * @param container 表示容器的 {@link BeanContainer}。
+     * @param registry 表示注册表的 {@link LocalExecutorRepository.Registry}。
+     * @throws IllegalArgumentException 当 {@code container} 或 {@code registry} 为 {@code null} 时。
+     */
+    public FitableAnnotationResolver(BeanContainer container, LocalExecutorRepository.Registry registry) {
+        this.container = notNull(container, "Container of a local proxy resolver cannot be null.");
+        this.registry = notNull(registry, "The registry to register local proxy cannot be null.");
+    }
+
+    @Override
+    public boolean resolve(BeanMetadata metadata, Method method) {
+        notNull(metadata, "Metadata of bean to resolve local proxy cannot be null.");
+        notNull(method, "Method to resolve local proxy cannot be null.");
+        AnnotationMetadata annotations = metadata.runtime().resolverOfAnnotations().resolve(method);
+        Fitable annotation = annotations.getAnnotation(Fitable.class);
+        if (annotation == null || StringUtils.isBlank(annotation.id())) {
+            return false;
+        }
+        Optional<String> opGenericableId = this.resolveGenericableId(method, annotation);
+        if (!opGenericableId.isPresent()) {
+            return false;
+        }
+        String fitableId = annotation.id();
+        if (!ID_PATTERN.matcher(opGenericableId.get()).matches() || !ID_PATTERN.matcher(fitableId).matches()) {
+            LOG.error("Genericable id or fitable id does not meet the naming requirements. "
+                    + "[genericableId={}, fitableId={}]", opGenericableId.get(), fitableId);
+            throw new IllegalStateException("Genericable id or fitable id does not meet the naming requirements: "
+                    + "only numbers, uppercase and lowercase letters, and '-', '_', '*', '.' are supported, "
+                    + "and the length is less than 128.");
+        }
+        Supplier<Object> beanSupplier = () -> this.container.beans().get(metadata.type());
+        UniqueFitableId uniqueFitableId = UniqueFitableId.create(opGenericableId.get(), fitableId);
+        LocalExecutor executor = new LocalFitableExecutor(uniqueFitableId, false, metadata, beanSupplier, method);
+        this.registry.register(uniqueFitableId, executor);
+        return true;
+    }
+
+    private Optional<String> resolveGenericableId(Method method, Fitable annotation) {
+        if (StringUtils.isNotBlank(annotation.genericable())) {
+            return Optional.of(annotation.genericable());
+        }
+        return ReflectionUtils.getInterfaceMethod(method).flatMap(AnnotationUtils::getGenericableId);
+    }
+}

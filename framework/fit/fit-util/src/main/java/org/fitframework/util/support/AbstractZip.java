@@ -1,0 +1,85 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.util.support;
+
+import static org.fitframework.util.ObjectUtils.cast;
+
+import org.fitframework.inspection.Validation;
+import org.fitframework.util.FileUtils;
+import org.fitframework.util.ObjectUtils;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.Charset;
+
+/**
+ * 为对 {@code .zip} 格式文件的操作提供基类。
+ *
+ * @author 梁济时
+ * @author 季聿阶
+ * @since 2020-10-05
+ */
+public abstract class AbstractZip<T extends AbstractZip<?>> {
+    private final File zipFile;
+    private final Charset charset;
+
+    private boolean override;
+
+    /**
+     * 使用待处理的文件和打包文件字符集来初始化 {@link AbstractZip} 的新实例。
+     *
+     * @param zipFile 表示待处理的文件的 {@link File}。
+     * @param charset 表示打包文件的字符集的 {@link Charset}。
+     */
+    public AbstractZip(File zipFile, Charset charset) {
+        this.zipFile = Validation.notNull(zipFile, "The zip file to process cannot be null.");
+        this.charset = ObjectUtils.nullIf(charset, FileUtils.DEFAULT_CHARSET);
+    }
+
+    /**
+     * 设置属性：是否覆盖。
+     *
+     * @param override 表示是否覆盖的属性的 {@code boolean}。
+     * @return 表示设置属性后的自身对象的 {@link T}。
+     */
+    public T override(boolean override) {
+        this.override = override;
+        return cast(this);
+    }
+
+    /**
+     * 获取待打包的文件。
+     *
+     * @return 表示待打包的文件的 {@link File}。
+     */
+    protected final File file() {
+        return this.zipFile;
+    }
+
+    /**
+     * 获取打包的字符集。
+     *
+     * @return 表示待打包的字符集的 {@link Charset}。
+     */
+    protected final Charset charset() {
+        return this.charset;
+    }
+
+    /**
+     * 获取是否覆盖的属性。
+     *
+     * @return 表示是否覆盖属性的 {@code boolean}。
+     */
+    protected final boolean override() {
+        return this.override;
+    }
+
+    /**
+     * 开始进行打包或者解包。
+     *
+     * @throws IOException 当打包或者解包过程中发生异常时。
+     */
+    public abstract void start() throws IOException;
+}

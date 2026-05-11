@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.fitframework</groupId>
+        <artifactId>fit-test-parent</artifactId>
+        <version>3.7.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>fit-test-framework</artifactId>
+
+    <name>FIT Test Framework</name>
+    <description>FIT Framework Test Framework module provides a test framework that can run on FIT runtime, making it
+        convenient to perform application/plugin level integration testing in the FIT environment.
+    </description>
+    <url>https://github.com/fitlab-ai/fit-framework</url>
+
+    <properties>
+        <!-- Third-party versions -->
+        <junit5.version>5.12.2</junit5.version>
+        <h2.version>2.3.232</h2.version>
+        <mockito.version>5.17.0</mockito.version>
+    </properties>
+
+    <dependencies>
+        <!-- FIT core -->
+        <dependency>
+            <groupId>org.fitframework</groupId>
+            <artifactId>fit-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.fitframework</groupId>
+            <artifactId>fit-ioc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.fitframework</groupId>
+            <artifactId>fit-plugin</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.fitframework</groupId>
+            <artifactId>fit-runtime</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.fitframework</groupId>
+            <artifactId>fit-util</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.fitframework.service</groupId>
+            <artifactId>fit-http-classic</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.fitframework.service</groupId>
+            <artifactId>fit-http-protocol</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.fitframework</groupId>
+            <artifactId>fit-aop-aspect</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.fitframework</groupId>
+            <artifactId>fit-aop-bytebuddy</artifactId>
+        </dependency>
+
+        <!-- Mockito -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- DB -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Plugin -->
+        <dependency>
+            <groupId>org.fitframework.plugin</groupId>
+            <artifactId>fit-value-fastjson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.fitframework.plugin</groupId>
+            <artifactId>fit-message-serializer-json-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.fitframework.plugin</groupId>
+            <artifactId>fit-http-client-okhttp</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.fitframework.plugin</groupId>
+            <artifactId>fit-http-server-netty</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.fitframework.plugin</groupId>
+            <artifactId>fit-server-http</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.fitframework.plugin</groupId>
+            <artifactId>fit-http-handler-registry</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.fitframework.plugin</groupId>
+            <artifactId>fit-client-http</artifactId>
+        </dependency>
+
+        <!-- Test -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${junit5.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Self-test -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.fitframework</groupId>
+                <artifactId>fit-dependency-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifestEntries>
+                            <Created-By>FIT Lab</Created-By>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

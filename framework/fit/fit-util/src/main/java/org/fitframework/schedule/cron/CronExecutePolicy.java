@@ -1,0 +1,80 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2024-2025 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.schedule.cron;
+
+import static org.fitframework.inspection.Validation.isFalse;
+import static org.fitframework.inspection.Validation.isTrue;
+import static org.fitframework.inspection.Validation.notNull;
+
+import org.fitframework.inspection.Nonnull;
+import org.fitframework.schedule.support.AbstractExecutePolicy;
+
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.chrono.ChronoZonedDateTime;
+import java.util.Optional;
+import java.util.TimeZone;
+
+/**
+ * 表示 Cron 表达式的执行策略。
+ *
+ * @author 季聿阶
+ * @see <a href="https://en.wikipedia.org/wiki/Cron">CRON</a>
+ * @since 2022-11-15
+ */
+public class CronExecutePolicy extends AbstractExecutePolicy {
+    private final CronExpression expression;
+    private final ZoneId zoneId;
+
+    /**
+     * 使用指定的 Cron 表达式来初始化 {@link CronExecutePolicy} 的新实例。
+     *
+     * @param expression 表示 Cron 表达式的 {@link String}。
+     */
+    public CronExecutePolicy(String expression) {
+        this(expression, ZoneId.systemDefault());
+    }
+
+    /**
+     * 使用指定的 Cron 表达式和时区来初始化 {@link CronExecutePolicy} 的新实例。
+     *
+     * @param expression 表示 Cron 表达式的 {@link String}。
+     * @param timeZone 表示时区的 {@link TimeZone}。
+     */
+    public CronExecutePolicy(String expression, TimeZone timeZone) {
+        this(expression, notNull(timeZone, "The time zone cannot be null.").toZoneId());
+    }
+
+    /**
+     * 构造一个 Cron 表达式的执行策略。
+     *
+     * @param expression 表示 Cron 表达式的 {@link String}。
+     * @param zoneId 表示时区唯一标识的 {@link ZoneId}。
+     */
+    public CronExecutePolicy(String expression, ZoneId zoneId) {
+        CronExpressionParser parser = CronExpressionParser.create();
+        this.expression = parser.parse(expression);
+        this.zoneId = notNull(zoneId, "The zone id cannot be null.");
+    }
+
+    @Override
+    public Optional<Instant> nextExecuteTime(@Nonnull Execution execution, @Nonnull Instant startTime) {
+        this.validateExecutionStatus(execution.status());
+        ZonedDateTime init;
+        if (execution.status() == ExecutionStatus.SCHEDULING) {
+            init = ZonedDateTime.ofInstant(startTime, this.zoneId);
+        } else {
+            Optional<Instant> lastExecuteTime = execution.lastExecuteTime();
+            isTrue(lastExecuteTime.isPresent(), "The last execute time must be present.");
+            isFalse(lastExecuteTime.get().isBefore(startTime),
+                    "The last execute time cannot before the start time. [lastExecuteTime={0}, startTime={1}]",
+                    lastExecuteTime.get(),
+                    startTime);
+            init = ZonedDateTime.ofInstant(lastExecuteTime.get(), this.zoneId);
+        }
+        return this.expression.findNextDateTime(init).map(ChronoZonedDateTime::toInstant);
+    }
+}

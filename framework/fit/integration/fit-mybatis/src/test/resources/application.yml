@@ -1,0 +1,8 @@
+fit:
+  beans:
+    packages:
+      - 'org.fitframework.integration.mybatis'
+
+mybatis:
+  mapper-locations: 'mapper/*.xml'
+  map-underscore-to-camelcase: true

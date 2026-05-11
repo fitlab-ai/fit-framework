@@ -1,0 +1,3 @@
+#!/usr/bin/env node
+// 这个文件会直接执行 fit.js
+require('./fit.js');

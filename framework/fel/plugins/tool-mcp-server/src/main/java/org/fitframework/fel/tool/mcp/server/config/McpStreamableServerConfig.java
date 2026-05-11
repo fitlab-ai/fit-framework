@@ -1,0 +1,57 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2025 Huawei Technologies Co., Ltd.
+// Copyright (c) 2026 The FIT Lab AI Group
+
+package org.fitframework.fel.tool.mcp.server.config;
+
+import io.modelcontextprotocol.json.McpJsonMapper;
+import io.modelcontextprotocol.server.McpServer;
+import io.modelcontextprotocol.server.McpSyncServer;
+import io.modelcontextprotocol.spec.McpSchema;
+import org.fitframework.fel.tool.mcp.server.FitMcpServer;
+import org.fitframework.fel.tool.mcp.server.transport.FitMcpStreamableServerTransportProvider;
+import org.fitframework.fel.tool.service.ToolChangedObserverRegistry;
+import org.fitframework.fel.tool.service.ToolExecuteService;
+import org.fitframework.annotation.Bean;
+import org.fitframework.annotation.Component;
+import org.fitframework.annotation.Fit;
+import org.fitframework.annotation.Value;
+
+import java.time.Duration;
+
+/**
+ * MCP Streamable Server Bean implemented with MCP SDK.
+ *
+ * @author 黄可欣
+ * @since 2025-10-22
+ */
+@Component
+public class McpStreamableServerConfig {
+    @Bean
+    public FitMcpStreamableServerTransportProvider fitMcpStreamableServerTransportProvider(
+            @Value("${mcp.server.ping.interval-seconds}") int keepAliveIntervalSeconds,
+            @Value("${mcp.server.streamable.disallow-delete}") boolean disallowDelete) {
+        return FitMcpStreamableServerTransportProvider.builder()
+                .jsonMapper(McpJsonMapper.getDefault())
+                .keepAliveInterval(Duration.ofSeconds(keepAliveIntervalSeconds))
+                .disallowDelete(disallowDelete)
+                .build();
+    }
+
+    @Bean("McpSyncStreamableServer")
+    public McpSyncServer mcpSyncStreamableServer(FitMcpStreamableServerTransportProvider transportProvider,
+            @Value("${mcp.server.request.timeout-seconds}") int requestTimeoutSeconds) {
+        return McpServer.sync(transportProvider)
+                .serverInfo("FIT Store MCP Streamable Server", "3.7.0-SNAPSHOT")
+                .capabilities(McpSchema.ServerCapabilities.builder().tools(true).logging().build())
+                .requestTimeout(Duration.ofSeconds(requestTimeoutSeconds))
+                .build();
+    }
+
+    @Bean("McpStreamableServer")
+    public FitMcpServer defaultMcpStreamableServer(ToolExecuteService toolExecuteService,
+            @Fit(alias = "McpSyncStreamableServer") McpSyncServer mcpSyncServer,
+            ToolChangedObserverRegistry toolChangedObserverRegistry) {
+        return new FitMcpServer(toolExecuteService, mcpSyncServer, toolChangedObserverRegistry);
+    }
+}
