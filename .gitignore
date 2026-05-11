@@ -10,7 +10,7 @@
 
 # Common
 target/
-build/
+/build/
 tmp/
 
 # Gemini
@@ -69,7 +69,7 @@ htmlcov/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-instance/
+/instance/
 .webassets-cache
 .scrapy
 docs/_build/
