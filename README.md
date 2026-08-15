@@ -11,6 +11,17 @@ Spring 双模运行，支持插件热插拔与智能聚散部署，无缝统一�
 [![JDK](https://img.shields.io/badge/JDK-21-green.svg)](https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html)
 </div>
 
+> [!NOTE]
+> **项目维护说明**
+>
+> 本仓库是 [ModelEngine-Group/fit-framework](https://github.com/ModelEngine-Group/fit-framework)
+> 的社区维护延续版本，由原项目主要贡献者发起并独立维护。自 2026 年 5 月起，本项目在
+> [FitLab AI](https://github.com/fitlab-ai) 社区继续演进。
+>
+> 本仓库不隶属于原项目的维护组织，也不代表其官方立场。原项目的历史贡献归各贡献者所有，
+> 相关版权归相应权利人所有；本项目依据 [MIT License](LICENSE) 使用并维护相关代码，详情请参阅
+> [NOTICE](NOTICE)。
+
 ----------
 
 # FIT: 重新定义 AI 工程化的三维坐标系
