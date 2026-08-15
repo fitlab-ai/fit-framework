@@ -14,13 +14,18 @@ Spring 双模运行，支持插件热插拔与智能聚散部署，无缝统一�
 > [!NOTE]
 > **项目维护说明**
 >
-> 本仓库是 [ModelEngine-Group/fit-framework](https://github.com/ModelEngine-Group/fit-framework)
-> 的社区维护延续版本，由原项目主要贡献者发起并独立维护。自 2026 年 5 月起，本项目在
-> [FitLab AI](https://github.com/fitlab-ai) 社区继续演进。
+> 本仓库基于 [ModelEngine-Group/fit-framework](https://github.com/ModelEngine-Group/fit-framework)
+> 继续演进，由原项目主要贡献者发起，并在 [FitLab AI](https://github.com/fitlab-ai) 社区独立维护。
 >
 > 本仓库不隶属于原项目的维护组织，也不代表其官方立场。原项目的历史贡献归各贡献者所有，
 > 相关版权归相应权利人所有；本项目依据 [MIT License](LICENSE) 使用并维护相关代码，详情请参阅
 > [NOTICE](NOTICE)。
+
+## 项目沿革
+
+- **2019 年 12 月**：FIT Framework v1.0.x 正式启动。
+- **2025 年 2 月**：FIT Framework v3.5.x 首次在 GitHub 公开发布源代码。
+- **2026 年 5 月**：原项目主要贡献者在 FitLab AI 社区发起独立维护版本，并继续演进。
 
 ----------
 
